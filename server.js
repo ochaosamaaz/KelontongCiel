@@ -223,6 +223,9 @@ const __dirname = path.dirname(__filename);
         gopay,
         TelegramBot
     });
+
+    // Register notifyAdmin globally so web-checkout can use it
+    app.set('notifyAdmin', notifyAdmin);
     // Register Digiflazz webhook dispatcher (combined TG+WA — each silently ignores tx it doesn't own)
     // WA dispatcher is added below once setupWABot returns.
 

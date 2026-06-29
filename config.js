@@ -5,9 +5,8 @@
 
 const CONFIG = {
   // === KoalaStore API Settings ===
-  BASE_URL: "https://api.koalastore.digital/v1", // Base URL API KoalaStore
-  APP_TOKEN: "YOUR_APP_TOKEN_HERE", // App-Token dari KoalaStore
-  STORE_ID: "YOUR_STORE_ID_HERE", // Store ID kamu di KoalaStore
+  BASE_URL: "https://koalastore.digital/api", // Base URL API KoalaStore
+  API_KEY: "kb_live_2c97247e58b52471db6f2594f67b3c6def52e929", // API Key dari KoalaStore
 
   // === Store Info ===
   STORE_NAME: "KELONTONG CIEL",

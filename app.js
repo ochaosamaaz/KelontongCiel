@@ -3,10 +3,10 @@
 // ============================================
 
 // State
-let accessToken = null;
 let categories = [];
 let allProducts = [];
 let currentProduct = null;
+let currentVariant = null;
 
 // ============ INITIALIZATION ============
 document.addEventListener("DOMContentLoaded", () => {
@@ -54,7 +54,6 @@ function initNavbar() {
     }
   });
 }
-
 
 // ============ FAQ ============
 function initFAQ() {
@@ -124,113 +123,72 @@ function animateCounter(element) {
 
 
 // ============ KOALASTORE API INTEGRATION ============
-async function authenticate() {
+async function fetchProducts(page = 1) {
   try {
-    const response = await fetch(`${CONFIG.BASE_URL}/auth/anonymous`, {
-      method: "POST",
+    const response = await fetch(`${CONFIG.BASE_URL}/products?page=${page}`, {
       headers: {
-        "App-Token": CONFIG.APP_TOKEN,
+        "X-API-Key": CONFIG.API_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        device_id: generateDeviceId(),
-        platform: "web",
-      }),
     });
 
-    const data = await response.json();
-    if (data.success && data.data && data.data.token) {
-      accessToken = data.data.token;
-      return true;
+    const result = await response.json();
+    if (result.data) {
+      return result;
     }
-    console.error("Authentication failed:", data);
-    return false;
+    return null;
   } catch (error) {
-    console.error("Auth error:", error);
-    return false;
-  }
-}
-
-function generateDeviceId() {
-  // Generate or retrieve a persistent device ID
-  let deviceId = localStorage.getItem("kc_device_id");
-  if (!deviceId) {
-    deviceId = "kc_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem("kc_device_id", deviceId);
-  }
-  return deviceId;
-}
-
-function getHeaders() {
-  return {
-    "App-Token": CONFIG.APP_TOKEN,
-    Authorization: accessToken ? `Bearer ${accessToken}` : "",
-    "Content-Type": "application/json",
-  };
-}
-
-async function fetchCategories() {
-  try {
-    const response = await fetch(
-      `${CONFIG.BASE_URL}/places/${CONFIG.STORE_ID}/categories`,
-      { headers: getHeaders() }
-    );
-    const data = await response.json();
-    if (data.success && data.data) {
-      return data.data;
-    }
-    return [];
-  } catch (error) {
-    console.error("Fetch categories error:", error);
-    return [];
+    console.error("Fetch products error:", error);
+    return null;
   }
 }
 
 async function loadProducts() {
   const loadingState = document.getElementById("loadingState");
   const emptyState = document.getElementById("emptyState");
-  const productsGrid = document.getElementById("productsGrid");
 
   try {
-    // Step 1: Authenticate
-    const authSuccess = await authenticate();
-    if (!authSuccess) {
-      showError("Gagal terhubung ke server. Coba refresh halaman.");
-      return;
+    // Fetch all pages
+    let page = 1;
+    let allData = [];
+    let hasMore = true;
+
+    while (hasMore) {
+      const result = await fetchProducts(page);
+      if (result && result.data && result.data.length > 0) {
+        allData = allData.concat(result.data);
+        if (page >= result.last_page) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
-    // Step 2: Fetch categories with products
-    categories = await fetchCategories();
-
-    if (!categories || categories.length === 0) {
+    if (allData.length === 0) {
       loadingState.style.display = "none";
       emptyState.classList.remove("hidden");
       return;
     }
 
-    // Step 3: Extract all products from categories
-    allProducts = [];
-    categories.forEach((category) => {
-      if (category.services && category.services.length > 0) {
-        category.services.forEach((service) => {
-          allProducts.push({
-            ...service,
-            categoryName: category.name,
-            categoryId: category.id,
-          });
-        });
+    // Filter unavailable products if configured
+    allProducts = CONFIG.SHOW_UNAVAILABLE_PRODUCTS
+      ? allData
+      : allData.filter((p) => p.status === "available");
+
+    // Extract unique categories
+    const categorySet = new Set();
+    allData.forEach((p) => {
+      if (p.category) {
+        categorySet.add(p.category);
       }
     });
+    categories = Array.from(categorySet);
 
-    // Filter unavailable products if configured
-    if (!CONFIG.SHOW_UNAVAILABLE_PRODUCTS) {
-      allProducts = allProducts.filter((p) => p.is_available);
-    }
-
-    // Step 4: Render category filters
+    // Render
     renderCategoryFilters();
-
-    // Step 5: Render products
     loadingState.style.display = "none";
     renderProducts(allProducts);
 
@@ -247,7 +205,7 @@ function showError(message) {
   const loadingState = document.getElementById("loadingState");
   loadingState.innerHTML = `
     <div style="color: var(--text-muted);">
-      <p style="font-size: 2rem; margin-bottom: 10px;">⚠️</p>
+      <p style="font-size: 2rem; margin-bottom: 10px;">&#9888;&#65039;</p>
       <p>${message}</p>
       <button onclick="location.reload()" class="btn btn-outline" style="margin-top: 15px;">Refresh</button>
     </div>
@@ -261,26 +219,28 @@ function renderCategoryFilters() {
   filterContainer.innerHTML = `<button class="filter-btn active" data-category="all">Semua</button>`;
 
   categories.forEach((cat) => {
-    if (cat.services && cat.services.length > 0) {
-      const btn = document.createElement("button");
-      btn.className = "filter-btn";
-      btn.dataset.category = cat.id;
-      btn.textContent = cat.name;
-      filterContainer.appendChild(btn);
-    }
+    const btn = document.createElement("button");
+    btn.className = "filter-btn";
+    btn.dataset.category = cat;
+    btn.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    filterContainer.appendChild(btn);
   });
 
   // Add filter click handlers
   filterContainer.querySelectorAll(".filter-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      filterContainer.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+      filterContainer
+        .querySelectorAll(".filter-btn")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
-      const categoryId = btn.dataset.category;
-      if (categoryId === "all") {
+      const category = btn.dataset.category;
+      if (category === "all") {
         renderProducts(allProducts);
       } else {
-        const filtered = allProducts.filter((p) => p.categoryId === categoryId);
+        const filtered = allProducts.filter(
+          (p) => p.category && p.category.toLowerCase() === category.toLowerCase()
+        );
         renderProducts(filtered);
       }
     });
@@ -302,14 +262,22 @@ function renderProducts(products) {
     .map(
       (product) => `
     <div class="product-card" onclick="openOrderModal('${product.id}')">
-      ${product.photo ? `<img src="${product.photo.thumb_100 || product.photo.thumbnail}" alt="${product.name}" class="product-image" onerror="this.style.display='none'">` : ""}
-      <div class="product-category-tag">${product.categoryName}</div>
+      ${
+        product.image
+          ? `<img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.style.display='none'">`
+          : ""
+      }
+      <div class="product-category-tag">${product.category || "Digital"}</div>
       <h3 class="product-name">${product.name}</h3>
-      <p class="product-description">${product.description || "Produk digital premium"}</p>
+      <p class="product-description">${
+        product.features ? product.features.join(" | ") : "Produk digital premium"
+      }</p>
       <div class="product-footer">
-        <span class="product-price">${formatPrice(product.price)}</span>
-        <span class="product-badge ${product.is_available ? "badge-available" : "badge-unavailable"}">
-          ${product.is_available ? "Tersedia" : "Habis"}
+        <span class="product-price">${formatPrice(product.min_price || product.price)}</span>
+        <span class="product-badge ${
+          product.status === "available" ? "badge-available" : "badge-unavailable"
+        }">
+          ${product.status === "available" ? "Tersedia" : "Habis"}
         </span>
       </div>
     </div>
@@ -320,11 +288,7 @@ function renderProducts(products) {
 
 function formatPrice(price) {
   if (!price) return "Hubungi Admin";
-  return (
-    CONFIG.CURRENCY_SYMBOL +
-    " " +
-    price.toLocaleString("id-ID")
-  );
+  return CONFIG.CURRENCY_SYMBOL + " " + price.toLocaleString("id-ID");
 }
 
 
@@ -339,8 +303,60 @@ function openOrderModal(productId) {
   const descEl = document.getElementById("modalProductDesc");
 
   nameEl.textContent = currentProduct.name;
-  priceEl.textContent = formatPrice(currentProduct.price);
-  descEl.textContent = currentProduct.description || "Produk digital premium berkualitas tinggi.";
+
+  // Show variant selection if product has variants
+  let descContent = "";
+  if (currentProduct.features && currentProduct.features.length > 0) {
+    descContent += currentProduct.features.join(" | ");
+  }
+
+  // Build variants HTML
+  let variantsHtml = "";
+  if (currentProduct.variants && currentProduct.variants.length > 0) {
+    // Default to first available variant
+    const availableVariants = currentProduct.variants.filter(
+      (v) => v.status === "available" && v.stock > 0
+    );
+    currentVariant = availableVariants.length > 0 ? availableVariants[0] : currentProduct.variants[0];
+    priceEl.textContent = formatPrice(currentVariant.price);
+
+    variantsHtml = `
+      <div class="variant-section" style="margin-bottom: 20px;">
+        <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary);">Pilih Varian:</h4>
+        <div class="variant-grid" style="display: grid; gap: 8px;">
+          ${currentProduct.variants
+            .map(
+              (v) => `
+            <button class="variant-btn ${v === currentVariant ? "active" : ""}" 
+                    data-code="${v.code}" 
+                    ${v.status !== "available" || v.stock <= 0 ? "disabled" : ""}
+                    onclick="selectVariant('${v.code}')"
+                    style="
+                      display: flex; justify-content: space-between; align-items: center;
+                      padding: 12px 16px; border-radius: 8px; cursor: pointer;
+                      border: 1px solid ${v === currentVariant ? "var(--primary)" : "var(--border)"};
+                      background: ${v === currentVariant ? "rgba(108, 99, 255, 0.1)" : "var(--bg-dark)"};
+                      color: ${v.status !== "available" || v.stock <= 0 ? "var(--text-muted)" : "var(--text-primary)"};
+                      opacity: ${v.status !== "available" || v.stock <= 0 ? "0.5" : "1"};
+                      text-align: left; font-size: 0.85rem;
+                    ">
+              <span>${v.name}</span>
+              <span style="font-weight: 700; color: ${v.status === "available" && v.stock > 0 ? "var(--accent)" : "var(--text-muted)"};">
+                ${v.status === "available" && v.stock > 0 ? formatPrice(v.price) : "Habis"}
+              </span>
+            </button>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  } else {
+    currentVariant = null;
+    priceEl.textContent = formatPrice(currentProduct.price);
+  }
+
+  descEl.innerHTML = (descContent ? `<p style="margin-bottom: 16px;">${descContent}</p>` : "") + variantsHtml;
 
   modal.classList.add("active");
   document.body.style.overflow = "hidden";
@@ -349,11 +365,44 @@ function openOrderModal(productId) {
   setupPaymentButtons();
 }
 
+function selectVariant(code) {
+  if (!currentProduct || !currentProduct.variants) return;
+  const variant = currentProduct.variants.find((v) => v.code === code);
+  if (!variant || variant.status !== "available" || variant.stock <= 0) return;
+
+  currentVariant = variant;
+
+  // Update price display
+  document.getElementById("modalProductPrice").textContent = formatPrice(variant.price);
+
+  // Update variant buttons visual
+  const buttons = document.querySelectorAll(".variant-btn");
+  buttons.forEach((btn) => {
+    const isActive = btn.dataset.code === code;
+    btn.style.borderColor = isActive ? "var(--primary)" : "var(--border)";
+    btn.style.background = isActive ? "rgba(108, 99, 255, 0.1)" : "var(--bg-dark)";
+    btn.classList.toggle("active", isActive);
+  });
+}
+
 function closeOrderModal() {
   const modal = document.getElementById("orderModal");
   modal.classList.remove("active");
   document.body.style.overflow = "";
   currentProduct = null;
+  currentVariant = null;
+}
+
+function getOrderDetails() {
+  let productName = currentProduct.name;
+  let price = currentProduct.price;
+
+  if (currentVariant) {
+    productName += ` - ${currentVariant.name}`;
+    price = currentVariant.price;
+  }
+
+  return { productName, price };
 }
 
 function setupPaymentButtons() {
@@ -366,26 +415,34 @@ function setupPaymentButtons() {
   // Saweria button
   document.getElementById("paySaweria").onclick = () => {
     if (!currentProduct) return;
-    const saweriaUrl = CONFIG.SAWERIA_LINK;
-    window.open(saweriaUrl, "_blank");
+    const { productName, price } = getOrderDetails();
+    window.open(CONFIG.SAWERIA_LINK, "_blank");
     // Also open WhatsApp for confirmation
     setTimeout(() => {
-      const msg = `Halo KelontongCiel! Saya sudah bayar via Saweria untuk:\n\n📦 Produk: ${currentProduct.name}\n💰 Harga: ${formatPrice(currentProduct.price)}\n\nMohon diproses ya, terima kasih!`;
-      window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+      const msg = `Halo KelontongCiel! Saya sudah bayar via Saweria untuk:\n\n📦 Produk: ${productName}\n💰 Harga: ${formatPrice(price)}\n\nMohon diproses ya, terima kasih!`;
+      window.open(
+        `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,
+        "_blank"
+      );
     }, 1000);
   };
 
   // WhatsApp button
   document.getElementById("payWhatsapp").onclick = () => {
     if (!currentProduct) return;
-    const msg = `Halo KelontongCiel! Saya mau order:\n\n📦 Produk: ${currentProduct.name}\n💰 Harga: ${formatPrice(currentProduct.price)}\n\nBagaimana cara pembayarannya?`;
-    window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+    const { productName, price } = getOrderDetails();
+    const msg = `Halo KelontongCiel! Saya mau order:\n\n📦 Produk: ${productName}\n💰 Harga: ${formatPrice(price)}\n\nBagaimana cara pembayarannya?`;
+    window.open(
+      `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,
+      "_blank"
+    );
     closeOrderModal();
   };
 }
 
 function openQrisModal() {
   if (!currentProduct) return;
+  const { productName, price } = getOrderDetails();
 
   const qrisModal = document.getElementById("qrisModal");
   const qrisImage = document.getElementById("qrisImage");
@@ -395,9 +452,9 @@ function openQrisModal() {
 
   qrisImage.src = CONFIG.QRIS_IMAGE;
   qrisInstruction.textContent = CONFIG.PAYMENT_INSTRUCTION;
-  qrisAmount.textContent = formatPrice(currentProduct.price);
+  qrisAmount.textContent = formatPrice(price);
 
-  const confirmMsg = `Halo KelontongCiel! Saya sudah bayar via QRIS untuk:\n\n📦 Produk: ${currentProduct.name}\n💰 Harga: ${formatPrice(currentProduct.price)}\n\nMohon diproses ya, terima kasih!`;
+  const confirmMsg = `Halo KelontongCiel! Saya sudah bayar via QRIS untuk:\n\n📦 Produk: ${productName}\n💰 Harga: ${formatPrice(price)}\n\nMohon diproses ya, terima kasih!`;
   qrisConfirmBtn.href = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(confirmMsg)}`;
 
   qrisModal.classList.add("active");

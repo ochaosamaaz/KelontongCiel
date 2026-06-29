@@ -1,0 +1,14 @@
+node_modules/
+.sessions/
+logs/
+files/
+*.log
+configtelebot.json
+gopay.creds.json
+master.json
+dataUser.txt
+wa_users.json
+wa_transactions.json
+tele_transactions.json
+digiflazz_sync_state.json
+wa_session/

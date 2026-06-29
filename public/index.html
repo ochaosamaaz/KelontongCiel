@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* Modal Scroll Fix */
+        .modal-glass,
+        .modal-content {
+            max-height: 90vh;
+            /* Limit height */
+            overflow-y: auto;
+            /* Enable scroll */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar (Global & Modal) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+
+        /* Styling Fixes for Select (Injecting explicit overrides) */
+        .custom-select-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+        }
+
+        .modern-select {
+            display: block;
+            width: 100%;
+            padding: 14px 16px;
+            padding-right: 40px;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #fff !important;
+            border-radius: 12px;
+            appearance: none;
+            -webkit-appearance: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .modern-select:focus {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: #10b981 !important;
+            /* Use green primary */
+        }
+
+        .select-arrow {
+            position: absolute;
+            top: 50%;
+            right: 16px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #888;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .modern-select:focus+.select-arrow {
+            color: #10b981;
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .btn-secondary {
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #fff !important;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12) !important;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            background: #10b981;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-glow"></div>
+    <div class="dashboard-container">
+        <aside class="sidebar" role="navigation" aria-label="Main navigation">
+            <div class="brand">
+                <i class="fa-solid fa-cube"></i>
+                <span id="storeName">Ryuji Store</span>
+                <button type="button" class="btn-icon-small" onclick="editStoreName()"
+                    style="margin-left: 8px; font-size: 12px; width: 24px; height: 24px;"><i
+                        class="fa-solid fa-pen"></i></button>
+            </div>
+            <nav>
+                <a href="#" class="active" onclick="switchPage('dashboard')"><i class="fa-solid fa-table-columns"></i> <span data-i18n="nav.dashboard">Dashboard</span></a>
+                <a href="#" onclick="switchPage('salesHistory')"><i class="fa-solid fa-receipt"></i> <span data-i18n="nav.salesHistory">Sales History</span></a>
+                <a href="#" onclick="switchPage('koalaStore')"><i class="fa-solid fa-store"></i> <span data-i18n="nav.koalaStore">Koala Store</span></a>
+                <a href="#" onclick="switchPage('digiflazz')"><i class="fa-solid fa-bolt"></i> <span data-i18n="nav.digiflazz">Digiflazz PPOB</span></a>
+                <a href="#" onclick="openSettingsModal()"><i class="fa-solid fa-cog"></i> <span data-i18n="nav.settings">Settings</span></a>
+                <a href="#" onclick="openWAPanel()"><i class="fa-brands fa-whatsapp"></i> <span data-i18n="nav.whatsappBot">WhatsApp Bot</span></a>
+                <a href="#" onclick="document.getElementById('imageInput').click()"><i class="fa-solid fa-image"></i>
+                    <span data-i18n="nav.updateBanner">Update Banner</span></a>
+                <!-- Hidden input for file upload -->
+                <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="uploadImage()">
+
+                <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                    <a href="#" onclick="logout()" style="color: var(--error);"><i class="fa-solid fa-sign-out-alt"></i>
+                        <span data-i18n="nav.logout">Logout</span></a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot"></span> <span data-i18n="sidebar.systemOnline">System Online</span>
+                </div>
+                <div class="status-indicator" id="waStatusIndicator"
+                    style="margin-top:8px; display:flex; gap:6px; align-items:center;">
+                    <span class="dot" id="waDot" style="background:#555;"></span>
+                    <span id="waStatusText" style="font-size:12px;" data-i18n="sidebar.wa.offline">WA: Offline</span>
+                </div>
+            </div>
+        </aside>
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <main class="main-content" role="main">
+            <button type="button" class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <header>
+                <div class="header-title">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <h1 id="botName">Dashboard</h1>
+                        <button type="button" onclick="toggleTheme()" class="btn-icon-small" data-i18n-title="header.theme.toggle" title="Toggle Theme"
+                            style="background: transparent; border: 1px solid var(--border-color);">
+                            <i id="themeIcon" class="fa-solid fa-moon"></i>
+                        </button>
+                        <button type="button" onclick="window.i18n.toggleLanguage()" class="btn-icon-small lang-toggle-btn" data-i18n-title="header.lang.toggle" title="Switch Language"
+                            style="background: transparent; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; width: auto; min-width: 56px;">
+                            <i class="fa-solid fa-language"></i>
+                            <span id="langToggleLabel" style="font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">ID</span>
+                        </button>
+                    </div>
+                    <p><span data-i18n="header.welcome">Welcome back,</span> <span id="botUsername"
+                            style="color: var(--primary-hover); font-weight:700;">Admin</span></p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btnTransactions" onclick="openTransactionsModal()" class="btn-primary"
+                        style="background: white; color: black; border: 2px solid black;">
+                        <i class="fa-solid fa-list"></i> <span data-i18n="header.transactions">Transactions</span>
+                    </button>
+
+                    <button type="button" onclick="openAddModal()" class="btn-primary">
+                        <i class="fa-solid fa-plus"></i> <span data-i18n="header.newProduct">New Product</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Broadcast Modal -->
+            <div id="broadcastModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" data-i18n-aria="broadcast.title" aria-label="Send Broadcast" onclick="closeModal('broadcastModal')">
+                <div class="modal-glass" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h2 data-i18n="broadcast.title">Send Broadcast</h2>
+                        <button type="button" class="close-btn" onclick="closeModal('broadcastModal')"><i
+                                class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="input-group">
+                            <label data-i18n="broadcast.message">Message (Markdown supported)</label>
+                            <textarea id="broadcastMsg"
+                                data-i18n-placeholder="broadcast.placeholder"
+                                placeholder="e.g. 📢 *PROMO ALERT*&#10;&#10;Dapatkan diskon 50% hari ini!"
+                                style="height: 150px; font-family: monospace;"></textarea>
+                            <small style="color: var(--text-muted);" data-i18n="broadcast.hint">Will be sent to all active users.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost" onclick="closeModal('broadcastModal')" data-i18n="btn.cancel">Cancel</button>
+                        <button type="button" onclick="sendBroadcast()" class="btn-primary">
+                            <i class="fa-solid fa-paper-plane"></i> <span data-i18n="broadcast.send">Send Now</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Modal -->
+            <div id="transactionsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="txnModalTitle" onclick="closeModal('transactionsModal')">
+                <div class="modal-glass large-modal" onclick="event.stopPropagation()">
+                    <div class="modal-header">
+                        <h2 id="txnModalTitle" data-i18n="txn.title">Saweria Transactions</h2>
+                        <button type="button" class="close-btn" onclick="closeModal('transactionsModal')"><i
+                                class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div style="overflow-y: auto; max-height: 500px;">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;" data-i18n="txn.col.no">No</th>
+                                    <th data-i18n="txn.col.date">Date</th>
+                                    <th data-i18n="txn.col.gateway">Gateway</th>
+                                    <th data-i18n="txn.col.invoice">Invoice</th>
+                                    <th data-i18n="txn.col.amount">Amount</th>
+                                    <th data-i18n="txn.col.status">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="txnPagination" class="txn-pagination" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div id="dashboardContent">
+            <!-- Finance Stats -->
+            <div class="stats-grid">
+                <div class="card glass-card gradient-blue" style="position:relative;">
+                    <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
+                    <div class="stat-content">
+                        <p class="stat-label" data-i18n="stat.totalRevenue">Total Revenue</p>
+                        <h3 class="stat-value" id="totalRevenue">Rp 0</h3>
+                    </div>
+                    <button type="button" onclick="resetStats()" data-i18n-title="stat.reset.title" title="Reset Revenue & Profit"
+                        style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                        <i class="fa-solid fa-rotate-left"></i> <span data-i18n="stat.reset">Reset</span>
+                    </button>
+                </div>
+
+                <div class="card glass-card gradient-green" style="position:relative;">
+                    <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="stat-content">
+                        <p class="stat-label" data-i18n="stat.totalProfit">Total Profit</p>
+                        <h3 class="stat-value" id="totalProfit">Rp 0</h3>
+                    </div>
+                    <button type="button" onclick="resetStats()" data-i18n-title="stat.reset.title" title="Reset Revenue & Profit"
+                        style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                        <i class="fa-solid fa-rotate-left"></i> <span data-i18n="stat.reset">Reset</span>
+                    </button>
+                </div>
+
+                <div class="card glass-card gradient-purple" style="position:relative;">
+                    <div class="stat-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <div class="stat-content">
+                        <p class="stat-label" data-i18n="stat.totalSales">Total Sales</p>
+                        <h3 class="stat-value" id="totalSales">0</h3>
+                    </div>
+                    <button type="button" onclick="resetStats()" data-i18n-title="stat.reset.title" title="Reset semua stats"
+                        style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;transition:all 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                        <i class="fa-solid fa-rotate-left"></i> <span data-i18n="stat.reset">Reset</span>
+                    </button>
+                </div>
+
+                <div class="card glass-card gradient-orange">
+                    <div class="stat-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                    <div class="stat-content">
+                        <p class="stat-label" data-i18n="stat.totalStock">Total Stock</p>
+                        <h3 class="stat-value" id="totalStock">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts & Metrics -->
+            <div class="dashboard-secondary-grid">
+                <div class="glass-panel chart-container">
+                    <div class="panel-header">
+                        <h3 data-i18n="panel.topSelling">Top Selling Products</h3>
+                    </div>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="small-stats-column">
+                    <div class="card glass-card">
+                        <div class="card-icon" style="background: rgba(255,255,255,0.1);"><i
+                                class="fa-solid fa-users"></i></div>
+                        <div class="card-info">
+                            <h3 id="totalUsers">0</h3>
+                            <p data-i18n="stat.totalUsers">Total Users</p>
+                        </div>
+                    </div>
+                    <div class="card glass-card">
+                        <div class="card-icon" style="background: rgba(255,255,255,0.1);"><i
+                                class="fa-solid fa-box"></i></div>
+                        <div class="card-info">
+                            <h3 id="totalProducts">0</h3>
+                            <p data-i18n="stat.activeProducts">Active Products</p>
+                        </div>
+                    </div>
+                    <div class="card glass-card">
+                        <div class="card-icon" style="background: rgba(255,255,255,0.1);"><i
+                                class="fa-solid fa-store"></i></div>
+                        <div class="card-info">
+                            <h3 id="merchantCode">-</h3>
+                            <p data-i18n="stat.merchantCode">Merchant Code</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Broadcast Button (Below Info Cards) -->
+            <div style="margin-bottom: 30px;">
+                <button type="button" onclick="openBroadcastModal()" class="btn-primary"
+                    style="width: 100%; padding: 15px; font-size: 16px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);">
+                    <i class="fa-solid fa-bullhorn" style="margin-right: 10px;"></i> <span data-i18n="panel.broadcast.cta">Send Broadcast Message</span>
+                </button>
+            </div>
+
+            <div class="section-title">
+                <h2 style="margin:0 0 20px;" data-i18n="panel.inventory">Inventory</h2>
+            </div>
+
+            <div class="glass-panel">
+                <div class="table-container">
+                    <table id="productTable">
+                        <thead>
+                            <tr>
+                                <th data-i18n="table.productName">Product Name</th>
+                                <th data-i18n="table.id">ID</th>
+                                <th data-i18n="table.price">Price</th>
+                                <th data-i18n="table.profit">Profit</th>
+                                <th data-i18n="table.stock">Stock</th>
+                                <th class="text-right" data-i18n="table.actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Products injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <!-- Sales History Section (hidden by default) -->
+            <div id="salesHistorySection" class="page-section" style="display: none;">
+                <div class="section-title">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin:0;"><i class="fa-solid fa-receipt" style="margin-right: 8px;"></i><span data-i18n="sales.title">Sales History</span></h2>
+                        <button type="button" onclick="exportSalesCSV()" class="btn-primary"
+                            style="background: #10b981; border: none; padding: 8px 15px; font-size: 13px;">
+                            <i class="fa-solid fa-file-csv"></i> <span data-i18n="sales.export">Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="sales-filter-bar">
+                    <div class="sales-filter-group">
+                        <label data-i18n="sales.filter.source">Source</label>
+                        <select id="salesFilterSource" onchange="applySalesFilters()">
+                            <option value="all" data-i18n="sales.filter.source.all">All Sources</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="telegram">Telegram</option>
+                        </select>
+                    </div>
+                    <div class="sales-filter-group">
+                        <label data-i18n="sales.filter.status">Status</label>
+                        <select id="salesFilterStatus" onchange="applySalesFilters()">
+                            <option value="all" data-i18n="sales.filter.status.all">All Status</option>
+                            <option value="PAID" data-i18n="sales.filter.status.paid">Paid</option>
+                            <option value="UNPAID" data-i18n="sales.filter.status.unpaid">Unpaid</option>
+                            <option value="EXPIRED" data-i18n="sales.filter.status.expired">Expired</option>
+                            <option value="CANCELLED" data-i18n="sales.filter.status.cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="sales-filter-group">
+                        <label data-i18n="sales.filter.from">From</label>
+                        <input type="date" id="salesFilterDateFrom" onchange="applySalesFilters()">
+                    </div>
+                    <div class="sales-filter-group">
+                        <label data-i18n="sales.filter.to">To</label>
+                        <input type="date" id="salesFilterDateTo" onchange="applySalesFilters()">
+                    </div>
+                    <div class="sales-filter-group sales-filter-search">
+                        <label data-i18n="sales.filter.search">Search</label>
+                        <input type="text" id="salesFilterSearch" data-i18n-placeholder="sales.filter.search.placeholder" placeholder="Buyer, product, invoice..."
+                            oninput="applySalesFilters()">
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="sales-summary-row">
+                    <div class="sales-summary-card">
+                        <span class="sales-summary-label" data-i18n="sales.summary.total">Total Transactions</span>
+                        <span class="sales-summary-value" id="salesTotalCount">0</span>
+                    </div>
+                    <div class="sales-summary-card">
+                        <span class="sales-summary-label" data-i18n="sales.summary.revenue">Total Revenue</span>
+                        <span class="sales-summary-value" id="salesTotalRevenue">Rp 0</span>
+                    </div>
+                    <div class="sales-summary-card">
+                        <span class="sales-summary-label" data-i18n="sales.summary.filtered">Filtered</span>
+                        <span class="sales-summary-value" id="salesFilteredCount">0</span>
+                    </div>
+                </div>
+
+                <!-- Revenue Charts -->
+                <div class="sales-charts-grid">
+                    <div class="glass-panel chart-container">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-chart-line" style="margin-right: 6px;"></i><span id="lineChartTitle" data-i18n="sales.chart.daily">Daily Revenue</span></h3>
+                            <label class="chart-mode-toggle" data-i18n-title="sales.chart.toggleTitle" title="Switch Revenue / Profit">
+                                <input type="checkbox" id="chartProfitToggle" onchange="toggleChartMode(this.checked)">
+                                <span class="chart-toggle-track">
+                                    <span class="chart-toggle-label left" data-i18n="sales.chart.revenue">Revenue</span>
+                                    <span class="chart-toggle-label right" data-i18n="sales.chart.profit">Profit</span>
+                                    <span class="chart-toggle-thumb"></span>
+                                </span>
+                            </label>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="revenueLineChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel chart-container">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-chart-pie" style="margin-right: 6px;"></i><span id="pieChartTitle" data-i18n="sales.chart.byProduct">Revenue by Product</span></h3>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="revenuePieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="glass-panel">
+                    <div class="table-container">
+                        <table id="salesTable">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="txn.col.no">No</th>
+                                    <th data-i18n="txn.col.date">Date</th>
+                                    <th data-i18n="sales.filter.source">Source</th>
+                                    <th data-i18n="sales.col.buyer">Buyer</th>
+                                    <th data-i18n="txn.col.invoice">Invoice</th>
+                                    <th data-i18n="sales.col.product">Product</th>
+                                    <th data-i18n="sales.col.qty">Qty</th>
+                                     <th class="text-right" data-i18n="txn.col.amount">Amount</th>
+                                    <th class="text-right" data-i18n="table.profit">Profit</th>
+                                    <th data-i18n="txn.col.status">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTableBody">
+                                <tr><td colspan="10" style="text-align:center; padding: 40px;" data-i18n="sales.loading">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="salesPagination" class="txn-pagination" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Koala Store Section (hidden by default) -->
+            <div id="koalaStoreSection" class="page-section" style="display: none;">
+                <div class="section-title">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <h2 style="margin:0;"><i class="fa-solid fa-store" style="margin-right: 8px;"></i><span data-i18n="ks.title">Koala Store</span></h2>
+                            <span id="ksPageBalance" class="badge-success" style="font-size: 12px; padding: 6px 12px;">Saldo: -</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" onclick="loadKoalaCatalog(true)" class="btn-primary"
+                                style="background: #6366f1; border:none; padding: 8px 14px; font-size: 13px;"
+                                data-i18n-title="ks.fetchCatalog.title"
+                                title="Tarik ulang katalog dari API Koala">
+                                <i class="fa-solid fa-rotate"></i> <span data-i18n="ks.fetchCatalog">Fetch Catalog</span>
+                            </button>
+                            <button type="button" onclick="refreshKoalaStock()" class="btn-primary"
+                                style="background: #0ea5e9; border:none; padding: 8px 14px; font-size: 13px;"
+                                data-i18n-title="ks.refreshStock.title"
+                                title="Update stok & harga dasar produk yang sudah di-import">
+                                <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="ks.refreshStock">Refresh Stock</span>
+                            </button>
+                            <button type="button" onclick="openKoalaProfitModal()" class="btn-primary"
+                                style="background: #10b981; border:none; padding: 8px 14px; font-size: 13px;"
+                                data-i18n-title="ks.bulkProfit.title"
+                                title="Set profit massal untuk produk Koala yang di-import">
+                                <i class="fa-solid fa-money-bill-trend-up"></i> <span data-i18n="ks.bulkProfit">Bulk Profit</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="glass-panel" style="padding: 15px 20px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="ksSearchInput" data-i18n-placeholder="ks.search.placeholder" placeholder="Cari produk..." oninput="renderKoalaCatalog()"
+                        style="flex:1; min-width: 200px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; font-size: 14px;">
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="ks-filter-btn active" data-filter="all" onclick="setKsFilter('all')" data-i18n="ks.filter.all">All</button>
+                        <button type="button" class="ks-filter-btn" data-filter="imported" onclick="setKsFilter('imported')" data-i18n="ks.filter.imported">Imported</button>
+                        <button type="button" class="ks-filter-btn" data-filter="available" onclick="setKsFilter('available')" data-i18n="ks.filter.available">Belum Import</button>
+                    </div>
+                    <div id="ksBulkBar" style="display:none; gap: 8px; align-items: center; padding-left: 12px; border-left: 1px solid var(--border-color);">
+                        <span id="ksSelectedCount" style="font-size: 13px; color: var(--text-muted);">0 dipilih</span>
+                        <button type="button" onclick="importSelectedKoala()" class="btn-primary"
+                            style="background:#10b981; border:none; padding: 8px 14px; font-size: 13px;">
+                            <i class="fa-solid fa-download"></i> <span data-i18n="ks.importSelected">Import Selected</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Catalog grid -->
+                <div id="ksCatalogStatus" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                    <i class="fa-solid fa-store fa-2x"></i>
+                    <p style="margin-top: 12px;" data-i18n="ks.empty.hint" data-i18n-mode="html">Klik <b>Fetch Catalog</b> untuk memuat produk dari Koala Store.</p>
+                </div>
+                <div id="ksCatalogGrid"
+                    style="display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                </div>
+            </div>
+
+            <!-- Digiflazz PPOB Section (hidden by default) -->
+            <div id="digiflazzSection" class="page-section" style="display: none;">
+                <div class="section-title">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <h2 style="margin:0;"><i class="fa-solid fa-bolt" style="margin-right: 8px;"></i><span data-i18n="df.title">Digiflazz PPOB</span></h2>
+                            <span id="dfPageBalance" class="badge-success" style="font-size: 12px; padding: 6px 12px;">Saldo: -</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="btnDfSyncCatalog" onclick="loadDigiflazzCatalog(true)" class="btn-primary"
+                                style="background: #6366f1; border:none; padding: 8px 14px; font-size: 13px;"
+                                data-i18n-title="df.syncCatalog.title"
+                                title="Sync full price list dari Digiflazz (rate limit 1× per 5 menit)">
+                                <i class="fa-solid fa-rotate"></i> <span data-i18n="df.syncCatalog">Sync Catalog</span>
+                            </button>
+                            <button type="button" id="btnDfRefreshImported" onclick="refreshDigiflazzStock()" class="btn-primary"
+                                style="background: #0ea5e9; border:none; padding: 8px 14px; font-size: 13px;"
+                                data-i18n-title="df.refreshImported.title"
+                                title="Update harga & stok produk yang sudah di-import (per-SKU, 1 detik/produk)">
+                                <i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="df.refreshImported">Refresh Imported</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Sync status strip: cooldown + auto-sync info -->
+                    <div id="dfSyncStatusStrip" style="margin-top: -4px; padding: 8px 12px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.18); border-radius: 8px; font-size: 12px; color: var(--text-muted); display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                        <span><i class="fa-solid fa-clock"></i> <span data-i18n="df.lastSync">Last sync:</span> <b id="dfLastSyncLabel">-</b></span>
+                        <span><i class="fa-solid fa-hourglass-half"></i> <span data-i18n="df.cooldown">Cooldown:</span> <b id="dfCooldownLabel">-</b></span>
+                        <span><i class="fa-solid fa-rotate"></i> <span data-i18n="df.autoSync">Auto-sync:</span> <b id="dfAutoSyncLabel" data-i18n="df.autoSync.value">tiap 5m 30s</b></span>
+                        <span><i class="fa-solid fa-bolt"></i> <span data-i18n="df.delivery">Delivery:</span> <b id="dfDeliveryLabel">-</b></span>
+                    </div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="glass-panel" style="padding: 15px 20px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="dfSearchInput" data-i18n-placeholder="df.search.placeholder" placeholder="Cari produk / SKU..." oninput="renderDigiflazzCatalog()"
+                        style="flex:1; min-width: 200px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 10px; font-size: 14px;">
+                    <select id="dfCategoryFilter" onchange="renderDigiflazzCatalog()" class="modern-select"
+                        style="min-width: 160px;"><option value="" data-i18n="df.allCategories">Semua Kategori</option></select>
+                    <select id="dfBrandFilter" onchange="renderDigiflazzCatalog()" class="modern-select"
+                        style="min-width: 160px;"><option value="" data-i18n="df.allBrands">Semua Brand</option></select>
+                    <div style="display: flex; gap: 6px;">
+                        <button type="button" class="ks-filter-btn active" data-filter="all" onclick="setDfFilter('all')" data-i18n="ks.filter.all">All</button>
+                        <button type="button" class="ks-filter-btn" data-filter="imported" onclick="setDfFilter('imported')" data-i18n="ks.filter.imported">Imported</button>
+                        <button type="button" class="ks-filter-btn" data-filter="available" onclick="setDfFilter('available')" data-i18n="ks.filter.available">Belum Import</button>
+                    </div>
+                </div>
+
+                <div id="dfCatalogStatus" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                    <i class="fa-solid fa-bolt fa-2x"></i>
+                    <p style="margin-top: 12px;" data-i18n="df.empty.hint" data-i18n-mode="html">Klik <b>Sync Catalog</b> untuk memuat price list dari Digiflazz.</p>
+                </div>
+                <div id="dfCatalogGrid"
+                    style="display: none; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Edit/Add Modal -->
+    <div id="productModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-glass">
+            <div class="modal-header">
+                <h2 id="modalTitle" data-i18n="prod.modal.new">New Product</h2>
+                <button type="button" class="close-btn" onclick="closeModal('productModal')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="productForm">
+                <div class="input-group"
+                    style="flex-direction: row; align-items: center; gap: 10px; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <label style="margin-bottom: 0;" data-i18n="prod.type">Product Type:</label>
+                    <label class="switch" style="margin-left: auto;">
+                        <input type="checkbox" id="pIsFile" onchange="toggleProductTypeFields()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="typeLabel" style="font-weight: 600; min-width: 80px;" data-i18n="prod.type.account">Account</span>
+                </div>
+
+                <div class="input-group">
+                    <label data-i18n="prod.name">Product Name</label>
+                    <input type="text" id="pName" data-i18n-placeholder="prod.name.placeholder" placeholder="e.g. Netflix Premium" required>
+                </div>
+
+                <div class="row">
+                    <div class="input-group">
+                        <label data-i18n="prod.id">Product ID</label>
+                        <input type="text" id="pId" data-i18n-placeholder="prod.id.placeholder" placeholder="e.g. netflix_1m" required>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="prod.category">Category</label>
+                        <input type="text" id="pCategory" data-i18n-placeholder="prod.category.placeholder" placeholder="e.g. Netflix" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label data-i18n="prod.description">Description</label>
+                    <textarea id="pDescription" data-i18n-placeholder="prod.description.placeholder" placeholder="Detailed product description..."></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="input-group">
+                        <label data-i18n="prod.warranty">Warranty</label>
+                        <input type="text" id="pWarranty" data-i18n-placeholder="prod.warranty.placeholder" placeholder="e.g. 30 Days Full">
+                    </div>
+                    <div class="input-group account-only">
+                        <label data-i18n="prod.activation">Activation Method</label>
+                        <input type="text" id="pActivation" data-i18n-placeholder="prod.activation.placeholder" placeholder="e.g. Direct Login">
+                    </div>
+                </div>
+
+                <div class="row account-only">
+                    <div class="input-group">
+                        <label data-i18n="prod.email">Email Access</label>
+                        <input type="text" id="pEmail" data-i18n-placeholder="prod.email.placeholder" placeholder="e.g. From Us (Sharing)">
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="prod.usage">Usage Rules</label>
+                        <input type="text" id="pUsage" data-i18n-placeholder="prod.usage.placeholder" placeholder="e.g. Max 1 Device">
+                    </div>
+                </div>
+
+                <div class="input-group account-only">
+                    <label><span data-i18n="prod.format">Format Guide / Delimiter</span> <span
+                            style="color: var(--text-muted); font-size: 12px; font-weight: normal;" data-i18n="prod.format.optional">(Optional)</span></label>
+                    <input type="text" id="pFormat" data-i18n-placeholder="prod.format.placeholder" placeholder="e.g. email|password|profile|pin (for your reference)">
+                </div>
+
+                <div class="row">
+                    <div class="input-group">
+                        <label data-i18n="prod.price">Price (IDR)</label>
+                        <input type="number" id="pPrice" placeholder="0" required>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="prod.profit">Profit (IDR)</label>
+                        <input type="number" id="pProfit" placeholder="0" required>
+                    </div>
+                </div>
+
+                <!-- Bulk Discount Tiers -->
+                <div class="input-group bulk-discount-section">
+                    <label><span data-i18n="prod.bulkTier">Bulk Discount Tiers</span> <span style="color: var(--text-muted); font-size: 12px; font-weight: normal;" data-i18n="prod.format.optional">(Optional)</span></label>
+                    <small style="color: var(--text-muted); margin-bottom: 8px; display: block;" data-i18n="prod.bulkTier.hint">Set tiered pricing — buy more, pay less per unit.</small>
+                    <div id="bulkTierRows"></div>
+                    <button type="button" class="btn-add-tier" onclick="addBulkTierRow()" data-i18n="prod.bulkTier.add">+ Add Tier</button>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" onclick="closeModal('productModal')" data-i18n="btn.cancel">Cancel</button>
+                    <button type="submit" class="btn-primary" data-i18n="btn.save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stock Modal -->
+    <div id="stockModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" data-i18n-aria="stock.title" aria-label="Manage Stock">
+        <div class="modal-glass large-modal">
+            <div class="modal-header">
+                <h2 data-i18n="stock.title">Manage Stock</h2>
+                <button type="button" class="close-btn" onclick="closeModal('stockModal')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="stock-info">
+                    <span id="stockTitle">Product Name</span>
+                    <span class="info-badge" data-i18n="stock.badge.oneItem">One item per line</span>
+                </div>
+                <div id="accountStockContainer">
+                    <textarea id="stockContent" spellcheck="false" placeholder="email:pass&#10;email:pass"></textarea>
+                </div>
+                <div id="fileStockContainer" class="hidden"
+                    style="padding: 20px; border: 2px dashed var(--border-color); border-radius: 12px; text-align: center; background: rgba(255,255,255,0.02);">
+                    <i class="fa-solid fa-cloud-arrow-up"
+                        style="font-size: 40px; margin-bottom: 15px; color: var(--primary);"></i>
+                    <h3 data-i18n="stock.upload.title">Upload Session Files (.zip)</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin: 10px 0 20px;" data-i18n="stock.upload.hint">Drag and drop or click to
+                        select files. Each file counts as 1 stock.</p>
+                    <input type="file" id="stockFileInput" multiple accept=".zip,.txt,.session" style="display: none;"
+                        onchange="handleStockFileUpload(this.files)">
+                    <button type="button" class="btn-primary"
+                        onclick="document.getElementById('stockFileInput').click()" data-i18n="stock.upload.select">Select Files</button>
+
+                    <div id="fileUploadList"
+                        style="margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto;">
+                        <!-- List of selected files will appear here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-ghost" onclick="closeModal('stockModal')" data-i18n="stock.close">Close</button>
+                <button type="button" onclick="saveStock()" class="btn-primary" data-i18n="stock.save">Update Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-backdrop hidden">
+        <div class="modal-glass">
+            <div class="modal-header">
+                <h2 data-i18n="set.title">System Settings</h2>
+                <button type="button" class="close-btn" onclick="closeModal('settingsModal')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="settingsForm">
+                <div class="input-group">
+                    <label data-i18n="set.botToken">Telegram Bot Token</label>
+                    <input type="text" id="botToken" placeholder="123456:ABC-...">
+                    <small style="color: var(--text-muted);" data-i18n="set.botToken.hint">Changes require bot restart.</small>
+                </div>
+
+                <div class="row">
+                    <div class="input-group">
+                        <label data-i18n="set.adminTg">Admin Telegram</label>
+                        <input type="text" id="adminContactTelegram" data-i18n-placeholder="set.adminTg.placeholder" placeholder="username (tanpa @)">
+                        <small style="color: var(--text-muted);">URL: https://t.me/username</small>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="set.adminWa">Admin WhatsApp</label>
+                        <input type="text" id="adminContactWhatsapp" placeholder="62813293883">
+                        <small style="color: var(--text-muted);">URL: https://wa.me/nomor</small>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-group">
+                        <label data-i18n="set.storeName">Store Name</label>
+                        <input type="text" id="settings_store_name" placeholder="My Telegram Store">
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="set.opHours">Jam Operasional</label>
+                        <input type="text" id="operatingHours" placeholder="08.00 - 22.00 WIB">
+                        <small style="color: var(--text-muted);" data-i18n="set.opHours.hint">Ditampilkan di halaman kontak bot</small>
+                    </div>
+                </div>
+
+                <div class="card"
+                    style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: var(--accent-color);" data-i18n="set.gatekeeper">Gatekeeper
+                            (Join Required)</h3>
+                        <label class="switch">
+                            <input type="checkbox" id="gatekeeper_enabled">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label data-i18n="set.gatekeeper.channelId">Channel ID</label>
+                            <input type="text" id="gatekeeper_channel_id" placeholder="@mychannel">
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="set.gatekeeper.channelLink">Channel Link</label>
+                            <input type="text" id="gatekeeper_channel_link" placeholder="https://t.me/mychannel">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label data-i18n="set.gatekeeper.groupId">Group ID</label>
+                            <input type="text" id="gatekeeper_group_id" placeholder="-100...">
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="set.gatekeeper.groupLink">Group Link</label>
+                            <input type="text" id="gatekeeper_group_link" placeholder="https://t.me/mygroup">
+                        </div>
+                    </div>
+                    <small style="color: var(--text-muted);" data-i18n="set.gatekeeper.hint">Users must join these to use the bot.</small>
+                </div>
+
+                <div class="input-group">
+                    <label data-i18n="set.paymentProvider">Payment Provider</label>
+                    <input type="hidden" id="paymentProvider" value="tripay">
+                    <div class="provider-group">
+                        <div class="provider-card active" id="card_tripay" onclick="selectProvider('tripay')">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <span>Tripay</span>
+                        </div>
+                        <div class="provider-card" id="card_saweria" onclick="selectProvider('saweria')">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            <span>Saweria</span>
+                        </div>
+                        <div class="provider-card" id="card_pakasir" onclick="selectProvider('pakasir')">
+                            <i class="fa-solid fa-cash-register"></i>
+                            <span>Pakasir</span>
+                        </div>
+                        <div class="provider-card" id="card_gopay" onclick="selectProvider('gopay')">
+                            <i class="fa-solid fa-wallet"></i>
+                            <span>GoPay</span>
+                        </div>
+                        <div class="provider-card" id="card_dompetx" onclick="selectProvider('dompetx')">
+                            <img src="/dompetx-icon.png" alt="DompetX" class="provider-icon-img">
+                            <span>DompetX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tripay Config -->
+                <div id="tripayConfig">
+                    <div class="input-group">
+                        <label>Tripay API Key</label>
+                        <input type="text" id="apiKey" placeholder="Minta di website Tripay">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Tripay Private Key</label>
+                        <input type="text" id="privateKey" placeholder="Private Key Tripay">
+                    </div>
+
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Merchant Code</label>
+                            <input type="text" id="merchant_code">
+                        </div>
+                        <div class="input-group">
+                            <label>Merchant Ref (Prefix)</label>
+                            <input type="text" id="merchant_ref">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saweria Config -->
+                <div id="saweriaConfig" class="hidden">
+                    <div class="input-group">
+                        <label>Saweria Authorization (JWT)</label>
+                        <textarea id="saweria_token" placeholder="eyJ0eXAiOiJKV1QiLC..." style="height: 100px;"
+                            oninput="validateSaweriaInput()"></textarea>
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                            <small style="color: var(--text-muted);">Copy from Browser Network Tab (XHR -> Authorization
+                                header)</small>
+                            <span id="saweria_status" style="font-size: 12px; font-weight: 600;"></span>
+                        </div>
+                        <!-- Result Display (Read Only Inputs) -->
+                        <div id="saweria_info" class="hidden"
+                            style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <div class="input-group">
+                                <label>Saweria Account Name</label>
+                                <input type="text" id="saweria_username" readonly
+                                    style="background: rgba(0,0,0,0.2); cursor: not-allowed; color: #10b981; font-weight: bold;">
+                            </div>
+                            <div class="input-group">
+                                <label>Saweria Email</label>
+                                <input type="text" id="saweria_email" readonly
+                                    style="background: rgba(0,0,0,0.2); cursor: not-allowed;">
+                            </div>
+                            <div class="input-group">
+                                <label>Saweria User ID</label>
+                                <input type="text" id="saweria_id" readonly
+                                    style="background: rgba(0,0,0,0.2); cursor: not-allowed; font-family: monospace;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pakasir Config (slug + API Key only) -->
+                <div id="pakasirConfig" class="hidden">
+                    <div class="input-group">
+                        <label>Project Slug</label>
+                        <input type="text" id="pakasir_proj_slug" placeholder="e.g. my-store">
+                        <small>From <a href="https://app.pakasir.com/projects" target="_blank" style="color: var(--accent-color);">app.pakasir.com/projects</a></small>
+                    </div>
+
+                    <div class="input-group">
+                        <label>API Key</label>
+                        <input type="text" id="pakasir_proj_apikey" placeholder="Enter API Key..."
+                            style="font-family: monospace;">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Project Name (optional, for display)</label>
+                        <input type="text" id="pakasir_proj_name" placeholder="e.g. My Store">
+                    </div>
+                </div>
+
+                <!-- GoPay Config -->
+                <div id="gopayConfig" class="hidden">
+                    <div class="input-group">
+                        <label>Email GoBiz</label>
+                        <input type="text" id="gopayEmail" placeholder="email@example.com">
+                    </div>
+                    <div class="input-group">
+                        <label>Password/PIN GoBiz</label>
+                        <input type="password" id="gopayPassword" placeholder="Password GoBiz">
+                    </div>
+                    <div class="input-group">
+                        <label>Merchant ID (opsional, auto-detect saat login)</label>
+                        <input type="text" id="gopayMerchantId" placeholder="Merchant ID">
+                    </div>
+                    <div class="input-group">
+                        <label>QR String (QRIS Statis dari merchant)</label>
+                        <textarea id="gopayQrString" rows="3" placeholder="Paste QRIS string statis di sini..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="input-group">
+                            <label>Kode Unik Min</label>
+                            <input type="number" id="gopayUniqueMin" placeholder="0" min="0" value="0">
+                        </div>
+                        <div class="input-group">
+                            <label>Kode Unik Max</label>
+                            <input type="number" id="gopayUniqueMax" placeholder="200" min="1" value="200">
+                        </div>
+                    </div>
+                    <small style="color: var(--text-muted);">Nominal kode unik acak antara Min–Max ditambahkan ke total harga untuk menghindari duplikasi pembayaran.</small>
+                </div>
+
+                <!-- DompetX Config -->
+                <div id="dompetxConfig" class="hidden">
+                    <div class="input-group">
+                        <label>DompetX API Key</label>
+                        <input type="text" id="dompetx_api_key" placeholder="dompk_***************" style="font-family: monospace;">
+                        <small>Dapatkan di <a href="https://app.dompetx.com" target="_blank" style="color: var(--accent-color);">DompetX Dashboard</a> → Merchant → Details → API Keys</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Metode Pembayaran</label>
+                        <select id="dompetx_method">
+                            <optgroup label="🔥 Rekomendasi">
+                                <option value="QRIS">QRIS — semua dompet (0.70%)</option>
+                            </optgroup>
+                            <optgroup label="💳 E-Wallet">
+                                <option value="GOPAY">GoPay (2.00%)</option>
+                                <option value="OVO">OVO (2.00%)</option>
+                                <option value="DANA">DANA (2.00%)</option>
+                                <option value="SHOPEEPAY">ShopeePay (2.00%)</option>
+                                <option value="LINKAJA">LinkAja (2.00%)</option>
+                            </optgroup>
+                            <optgroup label="🏦 Virtual Account">
+                                <option value="VA_BCA">VA BCA (Rp 4.000)</option>
+                                <option value="VA_BNI">VA BNI (Rp 4.000)</option>
+                                <option value="VA_BRI">VA BRI (Rp 4.000)</option>
+                                <option value="VA_MANDIRI">VA Mandiri (Rp 4.000)</option>
+                                <option value="VA_PERMATA">VA Permata (Rp 4.000)</option>
+                                <option value="VA_CIMB">VA CIMB Niaga (Rp 4.000)</option>
+                                <option value="VA_DANAMON">VA Danamon (Rp 4.000)</option>
+                            </optgroup>
+                            <optgroup label="🏪 Retail">
+                                <option value="ALFAMART">Alfamart (Rp 5.000)</option>
+                                <option value="INDOMARET">Indomaret (Rp 5.000)</option>
+                            </optgroup>
+                        </select>
+                        <small style="color: var(--text-muted);">QRIS direkomendasikan — instan, support semua dompet & bank, biaya termurah.</small>
+                    </div>
+                </div>
+
+                <!-- Admin (Master) Management -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.05);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #ef4444;"><i
+                                class="fa-solid fa-shield-halved"></i> <span data-i18n="set.master">Admin (Master)</span></h3>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;"><span data-i18n="set.master.hint">Kelola Telegram User ID yang memiliki akses admin. Dapatkan ID via</span> <a href="https://t.me/userinfobot" target="_blank"
+                            style="color: var(--accent-color);">@userinfobot</a>.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <input type="text" id="masterIdInput" data-i18n-placeholder="set.master.placeholder" placeholder="Telegram User ID (angka)" style="flex: 1;"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        <button type="button" class="btn-primary" onclick="addMaster()"
+                            style="white-space: nowrap; padding: 8px 16px;">
+                            <i class="fa-solid fa-plus"></i> <span data-i18n="set.master.add">Tambah</span>
+                        </button>
+                    </div>
+                    <div id="masterList" style="display: flex; flex-direction: column; gap: 6px;">
+                        <small style="color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i>
+                            <span data-i18n="set.master.loading">Memuat...</span></small>
+                    </div>
+                </div>
+
+                <!-- Koala Store Config -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid var(--border-color); background: rgba(16, 185, 129, 0.05);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #10b981;" data-i18n="set.koala">Koala Store Integration
+                        </h3>
+                        <label class="switch">
+                            <input type="checkbox" id="koala_active">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="set.koala.apiKey">Koala API Key</label>
+                        <input type="password" id="koala_api_key" data-i18n-placeholder="set.koala.apiKey.placeholder" placeholder="Enter your Koala API Key"
+                            oninput="validateKoalaInput()">
+                        <div id="koala_balance_status" style="margin-top: 5px; font-size: 13px; font-weight: 600;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bot Modules — PPOB vs Beli Akun toggle -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.05);">
+                    <div style="margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #6366f1;">
+                            <i class="fa-solid fa-bars-staggered"></i> <span data-i18n="set.modules">Bot Modules</span>
+                        </h3>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" data-i18n="set.modules.hint">
+                            Pilih menu yang muncul di bot. Jika hanya satu yang aktif, user langsung masuk ke modul itu tanpa pertanyaan menu.
+                        </p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 8px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); cursor: pointer; font-size: 13px;">
+                            <span data-i18n="set.modules.account">🛒 Beli Akun</span>
+                            <label class="switch" style="margin: 0;">
+                                <input type="checkbox" id="module_account_enabled" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </label>
+                        <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); cursor: pointer; font-size: 13px;">
+                            <span data-i18n="set.modules.ppob">📲 PPOB / Pulsa</span>
+                            <label class="switch" style="margin: 0;">
+                                <input type="checkbox" id="module_ppob_enabled">
+                                <span class="slider round"></span>
+                            </label>
+                        </label>
+                    </div>
+                    <small style="display:block; margin-top: 10px; color: var(--text-muted); font-size: 11px;">
+                        <i class="fa-solid fa-circle-info"></i> <span data-i18n="set.modules.minOne">Minimal satu modul harus aktif. PPOB memerlukan kredensial Digiflazz yang valid di card di bawah.</span>
+                    </small>
+                </div>
+
+                <!-- Digiflazz PPOB Config -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid rgba(245,158,11,0.3); background: rgba(245,158,11,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #f59e0b;">
+                            <i class="fa-solid fa-bolt"></i> <span data-i18n="set.digi">Digiflazz PPOB Integration</span>
+                        </h3>
+                        <label class="switch">
+                            <input type="checkbox" id="digiflazz_active">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="set.digi.username">Username</label>
+                        <input type="text" id="digiflazz_username" data-i18n-placeholder="set.digi.username.placeholder" placeholder="Username Digiflazz"
+                            oninput="validateDigiflazzInput()">
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="set.digi.apiKey">API Key</label>
+                        <input type="password" id="digiflazz_api_key" data-i18n-placeholder="set.digi.apiKey.placeholder" placeholder="API Key (Production / Development)"
+                            oninput="validateDigiflazzInput()">
+                        <div id="digiflazz_balance_status" style="margin-top: 5px; font-size: 13px; font-weight: 600;"></div>
+                    </div>
+                    <div class="input-group">
+                        <label><span data-i18n="set.digi.webhookSecret">Webhook Secret</span> <small style="color: var(--text-muted); font-weight: 400;" data-i18n="set.digi.webhookSecret.opt">(opsional jika pakai polling)</small></label>
+                        <input type="password" id="digiflazz_webhook_secret" placeholder="Secret di Pengaturan API Digiflazz" oninput="updateDigiflazzModeLabel()">
+                    </div>
+
+                    <!-- Delivery mode + polling cadence -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                        <div class="input-group">
+                            <label data-i18n="set.digi.deliveryMode">Delivery Mode</label>
+                            <select id="digiflazz_delivery_mode" class="modern-select" onchange="updateDigiflazzModeLabel()">
+                                <option value="auto" data-i18n="set.digi.delivery.auto">Auto (rekomendasi)</option>
+                                <option value="webhook" data-i18n="set.digi.delivery.webhook">Webhook only</option>
+                                <option value="polling" data-i18n="set.digi.delivery.polling">Polling only</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="set.digi.pollInterval">Poll Interval (detik)</label>
+                            <input type="number" id="digiflazz_poll_interval_seconds" min="10" max="300" step="5" value="60"
+                                oninput="updateDigiflazzModeLabel()" placeholder="10–300">
+                        </div>
+                    </div>
+                    <div id="digiflazz_mode_label" style="margin-top: 6px; padding: 8px 10px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: 8px; font-size: 12px;">
+                        <i class="fa-solid fa-circle-info"></i> <span id="digiflazz_mode_label_text">Mode: -</span>
+                    </div>
+
+                    <small style="display:block; margin-top: 10px; color: var(--text-muted); font-size: 11px;">
+                        <i class="fa-solid fa-link"></i> Webhook URL: <code id="digiflazz_webhook_url">/webhook/digiflazz</code>
+                    </small>
+                    <small style="display:block; color: var(--text-muted); font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved"></i> Whitelist IP Digiflazz <code>52.74.250.133</code> di firewall (hanya jika pakai mode webhook).
+                    </small>
+                </div>
+
+                <!-- WhatsApp Store Config -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid rgba(37,211,102,0.3); background: rgba(37,211,102,0.05);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #25d366;"><i
+                                class="fa-brands fa-whatsapp"></i> <span data-i18n="set.wa">WhatsApp Bot</span></h3>
+                        <label class="switch">
+                            <input type="checkbox" id="wa_enabled" onchange="toggleWABot(this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="set.wa.hint">Aktifkan WhatsApp Store
+                        Bot. Gunakan produk & payment yang sama dengan Telegram.</p>
+                    <div id="waConnectSection" style="display:none;">
+                        <button type="button" class="btn-primary" onclick="openWAPanel()"
+                            style="width:100%; background: linear-gradient(135deg, #25d366, #128c7e); border:none;">
+                            <i class="fa-brands fa-whatsapp"></i> <span data-i18n="set.wa.setup">Setup / Manage WhatsApp</span>
+                        </button>
+                    </div>
+                    <small style="color: var(--text-muted);" data-i18n="set.wa.formatNote">Pesan bot (menu, produk) menggunakan format WhatsApp-style
+                        dengan emoji & box art.</small>
+                </div>
+
+                <!-- Order Notifications Config -->
+                <div class="card"
+                    style="margin-top: 20px; padding: 15px; border: 1px solid rgba(255,193,7,0.3); background: rgba(255,193,7,0.05);">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="font-size: 14px; text-transform: uppercase; color: #ffc107;"><i
+                                class="fa-solid fa-bell"></i> <span data-i18n="set.notif">Order Notifications</span></h3>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="set.notif.hint">Pilih status order yang ingin dikirim notifikasinya ke admin/master via Telegram Bot.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); cursor: pointer; font-size: 13px;">
+                            <input type="checkbox" id="notif_new" style="accent-color: #3b82f6; width: 16px; height: 16px;">
+                            <span data-i18n="set.notif.new">🛒 Order Baru</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); cursor: pointer; font-size: 13px;">
+                            <input type="checkbox" id="notif_paid" style="accent-color: #22c55e; width: 16px; height: 16px;">
+                            <span data-i18n="set.notif.paid">✅ Paid / Terbayar</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); cursor: pointer; font-size: 13px;">
+                            <input type="checkbox" id="notif_expired" style="accent-color: #f59e0b; width: 16px; height: 16px;">
+                            <span data-i18n="set.notif.expired">⏰ Expired</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); cursor: pointer; font-size: 13px;">
+                            <input type="checkbox" id="notif_cancelled" style="accent-color: #ef4444; width: 16px; height: 16px;">
+                            <span data-i18n="set.notif.cancelled">❌ Cancelled</span>
+                        </label>
+                    </div>
+                    <small style="color: var(--text-muted);"><i class="fa-solid fa-circle-info"></i> <span data-i18n="set.notif.minOne">Pastikan minimal 1 master terdaftar di master.json agar notifikasi terkirim.</span></small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" onclick="closeModal('settingsModal')" data-i18n="btn.cancel">Cancel</button>
+                    <button type="submit" class="btn-primary" data-i18n="set.save">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Koala Profit Modal -->
+    <div id="koalaProfitModal" class="modal-backdrop hidden" onclick="closeModal('koalaProfitModal')">
+        <div class="modal-glass" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 data-i18n="koalaProfit.title">Set Global Koala Profit</h2>
+                <button type="button" class="close-btn" onclick="closeModal('koalaProfitModal')">&times;</button>
+            </div>
+            <p style="margin-bottom: 20px; font-size: 14px; color: var(--text-muted);" data-i18n="koalaProfit.desc">Ubah harga semua produk Koala
+                Store secara massal berdasarkan pengaturan profit di bawah.</p>
+            <form id="koalaProfitForm">
+                <div class="input-group">
+                    <label data-i18n="koalaProfit.amount">Profit Amount</label>
+                    <input type="number" id="ks_profit_amount" class="modern-select" data-i18n-placeholder="koalaProfit.amount.placeholder" placeholder="Contoh: 1000 atau 10"
+                        required style="padding-right: 14px;">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="koalaProfit.type">Profit Type</label>
+                    <div style="position: relative;">
+                        <select id="ks_profit_type" class="modern-select">
+                            <option value="fixed" data-i18n="koalaProfit.type.fixed">Fixed Rupiah (Rp)</option>
+                            <option value="percent" data-i18n="koalaProfit.type.percent">Percentage (%)</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('koalaProfitModal')"
+                        style="flex:1;" data-i18n="btn.cancel">Cancel</button>
+                    <button type="submit" class="btn-primary" style="flex:1; background: #10b981;" data-i18n="koalaProfit.apply">Apply to All
+                        Koala</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Digiflazz Refresh Progress Modal -->
+    <div id="digiflazzRefreshModal" class="modal-backdrop hidden">
+        <div class="modal-glass" onclick="event.stopPropagation()" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="df.refresh.title">Refresh Imported</span></h2>
+                <button type="button" class="close-btn" onclick="closeDigiflazzRefreshModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;" data-i18n="df.refresh.desc">
+                    Per-SKU price &amp; stock refresh via Digiflazz (1 detik per produk untuk patuhi rate limit).
+                    Aman dijalankan kapan pun — tidak mempengaruhi cooldown 5 menit dari Sync Catalog.
+                </p>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 12px;">
+                    <span><span data-i18n="df.refresh.currentSku">SKU saat ini:</span> <code id="dfRefreshCurrentSku">-</code></span>
+                    <span><b id="dfRefreshProgress">0 / 0</b></span>
+                </div>
+                <div style="height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden; margin-bottom: 14px;">
+                    <div id="dfRefreshBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #0ea5e9); transition: width 0.3s ease;"></div>
+                </div>
+                <div style="display: flex; gap: 12px; font-size: 12px; color: var(--text-muted);">
+                    <span>✅ <span data-i18n="df.refresh.updated">Updated:</span> <b id="dfRefreshUpdated" style="color:#10b981;">0</b></span>
+                    <span>⚠️ <span data-i18n="df.refresh.stale">Stale:</span> <b id="dfRefreshStale" style="color:#f59e0b;">0</b></span>
+                    <span>❌ <span data-i18n="df.refresh.errors">Errors:</span> <b id="dfRefreshErrors" style="color:#ef4444;">0</b></span>
+                    <span style="margin-left:auto;">⏱ <span data-i18n="df.refresh.eta">ETA:</span> <b id="dfRefreshEta">-</b></span>
+                </div>
+                <div id="dfRefreshErrorsList" style="margin-top: 10px; max-height: 100px; overflow-y: auto; font-size: 11px; color: #ef4444;"></div>
+                <div id="dfRefreshSummary" style="margin-top: 16px; padding: 10px 12px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 8px; display: none; font-size: 13px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Bot Panel Modal -->
+    <div id="waPanelModal" class="modal-backdrop hidden" onclick="closeModal('waPanelModal')">
+        <div class="modal-glass large-modal" onclick="event.stopPropagation()" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 style="color:#25d366;"><i class="fa-brands fa-whatsapp"></i> <span data-i18n="wa.title">WhatsApp Store Bot</span></h2>
+                <button type="button" class="close-btn" onclick="closeModal('waPanelModal')"><i
+                        class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Status Section -->
+                <div id="waPanelStatus"
+                    style="padding: 20px; border-radius: 12px; background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.2); margin-bottom: 20px; display:flex; align-items:center; gap: 16px;">
+                    <div id="waStatusIcon" style="font-size: 36px; color: #555;"><i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <div id="waStatusTitle" style="font-weight:700; font-size:16px;" data-i18n="wa.notConnected">Belum Terhubung</div>
+                        <div id="waStatusSub" style="font-size:12px; color:var(--text-muted);" data-i18n="wa.notConnected.sub">Aktifkan bot di Settings
+                            dan scan QR</div>
+                    </div>
+                    <div style="margin-left:auto;">
+                        <button type="button" id="btnWaToggle" onclick="toggleWABotPanel()" class="btn-primary"
+                            style="background: linear-gradient(135deg, #25d366, #128c7e); border:none; min-width:120px;">
+                            <i class="fa-solid fa-power-off"></i> <span data-i18n="wa.activate">Aktifkan</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Section (banned/fatal) -->
+                <div id="waErrorSection"
+                    style="display:none; padding: 16px 20px; border-radius: 12px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); margin-bottom: 20px; text-align:center;">
+                    <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+                    <div id="waErrorTitle" style="font-weight:700; font-size:15px; color:#ef4444;" data-i18n="wa.error">Error</div>
+                    <div id="waErrorMessage" style="font-size:13px; color:var(--text-muted); margin-top:4px;"></div>
+                    <button type="button" onclick="logoutWABot()" class="btn-primary"
+                        style="margin-top: 12px; background: linear-gradient(135deg, #25d366, #128c7e); border:none; padding: 8px 20px; font-size:13px;">
+                        <i class="fa-solid fa-rotate"></i> <span data-i18n="wa.reset">Reset & Coba Nomor Lain</span>
+                    </button>
+                </div>
+
+                <!-- QR Section -->
+                <div id="waQrSection"
+                    style="display:none; text-align:center; padding: 20px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.2); margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 12px;" data-i18n="wa.qr.title">📱 Scan QR untuk Login</h3>
+                    <p style="color:var(--text-muted); font-size:13px; margin-bottom: 16px;" data-i18n="wa.qr.hint">Buka WhatsApp → Setelan →
+                        Perangkat Tertaut → Tautkan Perangkat</p>
+                    <img id="waQrImage" src="" alt="QR Code"
+                        style="max-width: 260px; border-radius: 12px; border: 3px solid rgba(37,211,102,0.5);">
+                    <p style="margin-top: 12px; color: var(--text-muted); font-size: 12px;" data-i18n="wa.qr.refresh">QR akan refresh otomatis.
+                        Scan segera!</p>
+                </div>
+
+                <!-- Connected Section -->
+                <div id="waConnectedSection"
+                    style="display:none; border-radius: 12px; background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.3); padding: 20px; margin-bottom: 20px;">
+                    <div style="display:flex; gap:16px; align-items:center; margin-bottom: 16px;">
+                        <div
+                            style="background:#25d366; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; color:white; font-size:22px;">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:700; font-size:16px;" data-i18n="wa.connected">✅ WhatsApp Terhubung</div>
+                            <div id="waConnectedNumber" style="font-size:13px; color:#25d366;">Loading...</div>
+                        </div>
+                        <button type="button" onclick="logoutWABot()" class="btn-primary"
+                            style="margin-left:auto; background: #ef4444; border:none; padding: 8px 16px; font-size:13px;">
+                            <i class="fa-solid fa-sign-out-alt"></i> <span data-i18n="wa.logout">Logout WA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WA Stats -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div
+                        style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 16px; text-align:center; border: 1px solid var(--border-color);">
+                        <div style="font-size:24px; font-weight:700; color:#25d366;" id="waUserCount">0</div>
+                        <div style="font-size:12px; color:var(--text-muted);" data-i18n="wa.stats.users">WA Users</div>
+                    </div>
+                    <div
+                        style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 16px; text-align:center; border: 1px solid var(--border-color);">
+                        <div style="font-size:24px; font-weight:700; color:#f59e0b;" id="waActiveTransactions">0</div>
+                        <div style="font-size:12px; color:var(--text-muted);" data-i18n="wa.stats.active">Transaksi Aktif</div>
+                    </div>
+                    <div
+                        style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 16px; text-align:center; border: 1px solid var(--border-color);">
+                        <div style="font-size:24px; font-weight:700; color:#6366f1;" id="waTotalTx">0</div>
+                        <div style="font-size:12px; color:var(--text-muted);" data-i18n="wa.stats.total">Total Transaksi</div>
+                    </div>
+                </div>
+
+                <!-- WA Broadcast -->
+                <div
+                    style="border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 16px;">
+                    <h3 style="margin-bottom: 12px; font-size:14px;"><i class="fa-solid fa-bullhorn"
+                            style="color: #25d366;"></i> <span data-i18n="wa.broadcast.title">Broadcast ke WA Users</span></h3>
+                    <textarea id="waBroadcastMsg" data-i18n-placeholder="wa.broadcast.placeholder" placeholder="Kirim pesan broadcast ke semua pengguna WhatsApp..."
+                        style="width:100%; height:100px; resize:vertical;"></textarea>
+                    <button type="button" onclick="sendWABroadcast()" class="btn-primary"
+                        style="width:100%; margin-top:10px; background: linear-gradient(135deg, #25d366, #128c7e); border:none;">
+                        <i class="fa-solid fa-paper-plane"></i> <span data-i18n="wa.broadcast.send">Kirim Broadcast</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

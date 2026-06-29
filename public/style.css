@@ -94,66 +94,177 @@ body {
     height: 100dvh;
 }
 
-/* Sidebar Saweria Style (Black-ish) */
+/* Collapsed Icon Sidebar */
 .sidebar {
-    width: 260px;
+    width: 72px;
     background: #0A0F1C;
-    border-right: none;
+    border-right: 1px solid rgba(34, 199, 255, 0.08);
     display: flex;
     flex-direction: column;
-    padding: 24px;
+    align-items: center;
+    padding: 16px 0;
     color: white;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.sidebar:hover {
+    width: 200px;
 }
 
 .brand {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--primary);
-    margin-bottom: 40px;
+    margin-bottom: 32px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    letter-spacing: -0.5px;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 0 16px;
 }
 
 .brand span {
     color: white;
+    display: none;
+}
+
+.sidebar:hover .brand span {
+    display: inline;
 }
 
 .brand i {
     color: var(--primary);
+    font-size: 24px;
+}
+
+.sidebar nav {
+    width: 100%;
+    padding: 0 10px;
+    flex: 1;
 }
 
 .sidebar nav a {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     text-decoration: none;
-    color: #94a3b8;
-    border-radius: 8px;
+    color: #64748B;
+    border-radius: 12px;
     transition: all 0.2s ease;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-weight: 500;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar nav a i {
+    font-size: 18px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.sidebar nav a span {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar:hover nav a span {
+    opacity: 1;
 }
 
 .sidebar nav a:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
+    background: rgba(34, 199, 255, 0.08);
+    color: #F1F5F9;
 }
 
 .sidebar nav a.active {
-    background: linear-gradient(135deg, #22C7FF, #8B5CF6);
-    color: #ffffff;
+    background: linear-gradient(135deg, rgba(34, 199, 255, 0.15), rgba(139, 92, 246, 0.15));
+    color: #22C7FF;
     font-weight: 700;
-    box-shadow: 0 4px 15px rgba(34, 199, 255, 0.25);
-    border-radius: 12px;
+    border: 1px solid rgba(34, 199, 255, 0.2);
 }
 
 .sidebar-footer {
     margin-top: auto;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.sidebar-footer .logout-btn {
+    color: #EF4444;
+    font-size: 16px;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.sidebar-footer .logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Top Bar */
+.topbar {
+    display: flex;
+    align-items: center;
+    padding: 16px 32px;
+    background: rgba(7, 11, 22, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(34, 199, 255, 0.08);
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #22C7FF, #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.topbar-center {
+    flex: 1;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topbar-welcome {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.topbar-welcome strong {
+    color: var(--primary);
+}
+
+.topbar .hamburger-btn {
+    display: none;
 }
 
 .status-indicator {
@@ -1257,28 +1368,44 @@ body.dark-mode .chart-mode-toggle input:checked ~ .chart-toggle-track .chart-tog
 
 /* ===== Tablet & Mobile: max-width 768px ===== */
 @media (max-width: 768px) {
-    .hamburger-btn {
+    .hamburger-btn,
+    .topbar .hamburger-btn {
         display: flex;
     }
 
     .sidebar {
         position: fixed;
-        left: -260px;
+        left: -220px;
         top: 0;
         z-index: 999;
         height: 100dvh;
-        width: 260px;
+        width: 200px;
         transition: transform 0.3s ease;
         overflow-y: auto;
     }
 
+    .sidebar:hover {
+        width: 200px;
+    }
+
+    .sidebar nav a span {
+        opacity: 1;
+    }
+
     .sidebar.open {
-        transform: translateX(260px);
+        transform: translateX(220px);
+    }
+
+    .topbar {
+        padding: 12px 16px;
+    }
+
+    .topbar-welcome {
+        display: none;
     }
 
     .main-content {
         padding: 16px;
-        padding-top: 70px; /* space for hamburger */
     }
 
     header {

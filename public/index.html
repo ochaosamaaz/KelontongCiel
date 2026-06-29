@@ -130,68 +130,67 @@
 <body>
     <div class="background-glow"></div>
     <div class="dashboard-container">
+        <!-- Collapsed Icon Sidebar -->
         <aside class="sidebar" role="navigation" aria-label="Main navigation">
             <div class="brand">
                 <i class="fa-solid fa-cube"></i>
-                <span id="storeName">Ryuji Store</span>
-                <button type="button" class="btn-icon-small" onclick="editStoreName()"
-                    style="margin-left: 8px; font-size: 12px; width: 24px; height: 24px;"><i
-                        class="fa-solid fa-pen"></i></button>
             </div>
             <nav>
-                <a href="#" class="active" onclick="switchPage('dashboard')"><i class="fa-solid fa-table-columns"></i> <span data-i18n="nav.dashboard">Dashboard</span></a>
-                <a href="#" onclick="switchPage('salesHistory')"><i class="fa-solid fa-receipt"></i> <span data-i18n="nav.salesHistory">Sales History</span></a>
-                <a href="#" onclick="switchPage('koalaStore')"><i class="fa-solid fa-store"></i> <span data-i18n="nav.koalaStore">Koala Store</span></a>
-                <a href="#" onclick="switchPage('digiflazz')"><i class="fa-solid fa-bolt"></i> <span data-i18n="nav.digiflazz">Digiflazz PPOB</span></a>
-                <a href="#" onclick="openSettingsModal()"><i class="fa-solid fa-cog"></i> <span data-i18n="nav.settings">Settings</span></a>
-                <a href="#" onclick="openWAPanel()"><i class="fa-brands fa-whatsapp"></i> <span data-i18n="nav.whatsappBot">WhatsApp Bot</span></a>
-                <a href="#" onclick="document.getElementById('imageInput').click()"><i class="fa-solid fa-image"></i>
-                    <span data-i18n="nav.updateBanner">Update Banner</span></a>
-                <!-- Hidden input for file upload -->
+                <a href="#" class="active" onclick="switchPage('dashboard')" title="Dashboard"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></a>
+                <a href="#" onclick="switchPage('salesHistory')" title="Sales History"><i class="fa-solid fa-receipt"></i><span>Riwayat</span></a>
+                <a href="#" onclick="switchPage('koalaStore')" title="Koala Store"><i class="fa-solid fa-store"></i><span>Store</span></a>
+                <a href="#" onclick="switchPage('digiflazz')" title="Digiflazz PPOB"><i class="fa-solid fa-bolt"></i><span>PPOB</span></a>
+                <a href="#" onclick="openSettingsModal()" title="Settings"><i class="fa-solid fa-cog"></i><span>Settings</span></a>
+                <a href="#" onclick="openWAPanel()" title="WhatsApp Bot"><i class="fa-brands fa-whatsapp"></i><span>WA Bot</span></a>
+                <a href="#" onclick="document.getElementById('imageInput').click()" title="Update Banner"><i class="fa-solid fa-image"></i><span>Banner</span></a>
                 <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="uploadImage()">
-
-                <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                    <a href="#" onclick="logout()" style="color: var(--error);"><i class="fa-solid fa-sign-out-alt"></i>
-                        <span data-i18n="nav.logout">Logout</span></a>
-                </div>
             </nav>
             <div class="sidebar-footer">
                 <div class="status-indicator">
-                    <span class="dot"></span> <span data-i18n="sidebar.systemOnline">System Online</span>
+                    <span class="dot"></span>
                 </div>
-                <div class="status-indicator" id="waStatusIndicator"
-                    style="margin-top:8px; display:flex; gap:6px; align-items:center;">
+                <div class="status-indicator" id="waStatusIndicator">
                     <span class="dot" id="waDot" style="background:#555;"></span>
-                    <span id="waStatusText" style="font-size:12px;" data-i18n="sidebar.wa.offline">WA: Offline</span>
                 </div>
+                <a href="#" onclick="logout()" title="Logout" class="logout-btn"><i class="fa-solid fa-sign-out-alt"></i></a>
             </div>
         </aside>
         <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
         <main class="main-content" role="main">
-            <button type="button" class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
-                <i class="fa-solid fa-bars"></i>
-            </button>
+            <!-- Top Bar -->
+            <div class="topbar">
+                <button type="button" class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="topbar-left">
+                    <h1 class="topbar-title" id="storeName">Kelontong Ciel</h1>
+                    <button type="button" class="btn-icon-small" onclick="editStoreName()" title="Edit Store Name"><i class="fa-solid fa-pen"></i></button>
+                </div>
+                <div class="topbar-center">
+                    <span id="waStatusText" style="font-size:12px; color: var(--text-muted);">WA: Offline</span>
+                </div>
+                <div class="topbar-right">
+                    <span class="topbar-welcome">Welcome, <strong id="botUsername">Admin</strong></span>
+                    <button type="button" onclick="toggleTheme()" class="btn-icon-small" title="Toggle Theme">
+                        <i id="themeIcon" class="fa-solid fa-moon"></i>
+                    </button>
+                    <button type="button" onclick="window.i18n && window.i18n.toggleLanguage()" class="btn-icon-small" title="Switch Language">
+                        <i class="fa-solid fa-language"></i>
+                        <span id="langToggleLabel" style="font-size: 11px; font-weight: 700;">ID</span>
+                    </button>
+                </div>
+            </div>
+
             <header>
                 <div class="header-title">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <h1 id="botName">Dashboard</h1>
-                        <button type="button" onclick="toggleTheme()" class="btn-icon-small" data-i18n-title="header.theme.toggle" title="Toggle Theme"
-                            style="background: transparent; border: 1px solid var(--border-color);">
-                            <i id="themeIcon" class="fa-solid fa-moon"></i>
-                        </button>
-                        <button type="button" onclick="window.i18n.toggleLanguage()" class="btn-icon-small lang-toggle-btn" data-i18n-title="header.lang.toggle" title="Switch Language"
-                            style="background: transparent; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; width: auto; min-width: 56px;">
-                            <i class="fa-solid fa-language"></i>
-                            <span id="langToggleLabel" style="font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">ID</span>
-                        </button>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h1 id="botName" style="display:none;">Dashboard</h1>
                     </div>
-                    <p><span data-i18n="header.welcome">Welcome back,</span> <span id="botUsername"
-                            style="color: var(--primary-hover); font-weight:700;">Admin</span></p>
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" id="btnTransactions" onclick="openTransactionsModal()" class="btn-primary"
-                        style="background: white; color: black; border: 2px solid black;">
+                        style="background: rgba(34,199,255,0.1); color: var(--primary); border: 1px solid rgba(34,199,255,0.3);">
                         <i class="fa-solid fa-list"></i> <span data-i18n="header.transactions">Transactions</span>
                     </button>
 

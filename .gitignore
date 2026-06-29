@@ -10,5 +10,6 @@ dataUser.txt
 wa_users.json
 wa_transactions.json
 tele_transactions.json
+web_transactions.json
 digiflazz_sync_state.json
 wa_session/

@@ -15,7 +15,7 @@ const CONFIG = {
   STORE_DOMAIN: "kelontongciel.my.id",
 
   // === Payment Settings ===
-  WHATSAPP_NUMBER: "6281234567890", // Nomor WhatsApp (format: 62xxx)
+  WHATSAPP_NUMBER: "6281809182368", // Nomor WhatsApp (format: 62xxx)
   WHATSAPP_MESSAGE: "Halo KelontongCiel! Saya mau order:", // Pesan default WA
 
   SAWERIA_USERNAME: "YOUR_SAWERIA_USERNAME", // Username Saweria (tanpa @)

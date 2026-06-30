@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kelontong Ciel - Akun Pelanggan">
+  <title>My Account - Kelontong Ciel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="store.css">
+  <style>
+    /* Account Page Specific Styles */
+    .account-page {
+      min-height: 100vh;
+      padding: 120px 0 80px;
+    }
+
+    .account-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .auth-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 16px;
+      text-align: center;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .auth-tab.active {
+      color: var(--accent-blue);
+    }
+
+    .auth-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--accent-gradient);
+      border-radius: 2px;
+    }
+
+    .auth-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .auth-form {
+      padding: 32px;
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-error {
+      color: #ef4444;
+      font-size: 0.8rem;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .form-error.show {
+      display: block;
+    }
+
+    .form-success {
+      color: #10b981;
+      font-size: 0.85rem;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .form-success.show {
+      display: block;
+    }
+
+    .auth-submit {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    /* Profile Section */
+    .profile-section {
+      display: none;
+    }
+
+    .profile-section.active {
+      display: block;
+    }
+
+    .profile-header {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .profile-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .profile-name {
+      font-family: var(--font-heading);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .profile-email {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .profile-phone {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .reseller-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-purple);
+    }
+
+    .profile-actions {
+      margin-top: 20px;
+    }
+
+    .btn-logout {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    /* Orders Section */
+    .orders-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .orders-header {
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border-color);
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .orders-list {
+      padding: 16px 28px;
+    }
+
+    .order-item {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-info {
+      flex: 1;
+    }
+
+    .order-product {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .order-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .order-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .order-status.paid {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .order-status.unpaid {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .order-status.expired {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .orders-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .order-price {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--accent-blue);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+      .account-page {
+        padding: 100px 0 60px;
+      }
+      .auth-form {
+        padding: 24px;
+      }
+      .profile-header {
+        padding: 24px;
+      }
+      .orders-list {
+        padding: 12px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar scrolled" id="navbar">
+    <div class="container nav-container">
+      <a href="/" class="nav-logo">
+        <span class="logo-icon">&#9670;</span>
+        <span class="logo-text">Kelontong Ciel</span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/" class="nav-link">Home</a></li>
+        <li><a href="/#products" class="nav-link">Products</a></li>
+        <li><a href="/#about" class="nav-link">About</a></li>
+        <li><a href="/#faq" class="nav-link">FAQ</a></li>
+        <li><a href="/warranty" class="nav-link">Warranty</a></li>
+        <li><a href="/account" class="nav-link active">My Account</a></li>
+      </ul>
+      <a href="/account" class="btn btn-primary nav-cta" id="navAccountBtn">My Account</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <section class="account-page">
+    <div class="container account-container">
+
+      <!-- Auth Section (Login/Register) — shown when NOT logged in -->
+      <div id="authSection" class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login" onclick="switchTab('login')">Login</button>
+          <button class="auth-tab" data-tab="register" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" class="form-input" id="loginEmail" placeholder="nama@email.com" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" required>
+          </div>
+          <p class="form-error" id="loginError"></p>
+          <button type="submit" class="btn btn-primary btn-lg auth-submit" id="loginBtn">Login</button>
+        </form>
+
+        <!-- Register Form -->
+        <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label for="regName">Nama Lengkap</label>
+            <input type="text" class="form-input" id="regName" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="regEmail">Email</label>
+            <input type="email" class="form-input" id="regEmail" placeholder="nama@email.com" required>
+          </div>
+          <div class="form-group">
+            <label for="regPhone">Nomor WhatsApp</label>
+            <input type="tel" class="form-input" id="regPhone" placeholder="0838xxxxxxx" required>
+          </div>
+          <div class="form-group">
+            <label for="regPassword">Password (min. 6 karakter)</label>
+            <input type="password" class="form-input" id="regPassword" placeholder="Buat password" required minlength="6">
+          </div>
+          <p class="form-error" id="registerError"></p>
+          <p class="form-success" id="registerSuccess"></p>
+          <button type="submit" class="btn btn-primary btn-lg auth-submit" id="registerBtn">Daftar</button>
+        </form>
+      </div>
+
+      <!-- Profile Section — shown when logged in -->
+      <div id="profileSection" class="profile-section">
+        <div class="profile-header">
+          <div class="profile-avatar" id="profileAvatar">?</div>
+          <h2 class="profile-name" id="profileName">-</h2>
+          <p class="profile-email" id="profileEmail">-</p>
+          <p class="profile-phone" id="profilePhone">-</p>
+          <div id="resellerBadgeWrap" style="display:none;">
+            <span class="reseller-badge">&#9733; Reseller</span>
+          </div>
+          <div class="profile-actions">
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+          </div>
+        </div>
+
+        <div class="orders-card">
+          <div class="orders-header">Riwayat Pesanan</div>
+          <div class="orders-list" id="ordersList">
+            <div class="orders-empty" id="ordersEmpty">Belum ada pesanan.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // Mobile nav toggle
+    var navToggle = document.getElementById('navToggle');
+    var navLinks = document.getElementById('navLinks');
+    if (navToggle && navLinks) {
+      navToggle.addEventListener('click', function() {
+        navToggle.classList.toggle('active');
+        navLinks.classList.toggle('active');
+        document.body.style.overflow = navLinks.classList.contains('active') ? 'hidden' : '';
+      });
+      navLinks.querySelectorAll('.nav-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+          navToggle.classList.remove('active');
+          navLinks.classList.remove('active');
+          document.body.style.overflow = '';
+        });
+      });
+    }
+
+    // Tab switching
+    window.switchTab = function(tab) {
+      document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+      document.getElementById(tab + 'Form').classList.add('active');
+      // Clear errors
+      document.getElementById('loginError').classList.remove('show');
+      document.getElementById('registerError').classList.remove('show');
+      document.getElementById('registerSuccess').classList.remove('show');
+    };
+
+    // Check session on load
+    checkSession();
+
+    function checkSession() {
+      fetch('/api/customer/profile')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.customer) {
+            showProfile(data.customer);
+          } else {
+            showAuth();
+          }
+        })
+        .catch(function() { showAuth(); });
+    }
+
+    function showAuth() {
+      document.getElementById('authSection').style.display = '';
+      document.getElementById('profileSection').classList.remove('active');
+    }
+
+    function showProfile(customer) {
+      document.getElementById('authSection').style.display = 'none';
+      document.getElementById('profileSection').classList.add('active');
+
+      document.getElementById('profileAvatar').textContent = (customer.name || '?').charAt(0).toUpperCase();
+      document.getElementById('profileName').textContent = customer.name || '-';
+      document.getElementById('profileEmail').textContent = customer.email || '-';
+      document.getElementById('profilePhone').textContent = customer.phone ? ('+' + customer.phone) : '-';
+
+      if (customer.isReseller) {
+        document.getElementById('resellerBadgeWrap').style.display = '';
+      } else {
+        document.getElementById('resellerBadgeWrap').style.display = 'none';
+      }
+
+      loadOrders();
+    }
+
+    function loadOrders() {
+      fetch('/api/customer/orders')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var list = document.getElementById('ordersList');
+          var empty = document.getElementById('ordersEmpty');
+
+          if (!data.success || !data.orders || data.orders.length === 0) {
+            list.innerHTML = '';
+            list.appendChild(empty);
+            empty.style.display = '';
+            return;
+          }
+
+          empty.style.display = 'none';
+          var html = '';
+          data.orders.forEach(function(order) {
+            var statusClass = order.status === 'PAID' ? 'paid' : (order.status === 'EXPIRED' ? 'expired' : 'unpaid');
+            var statusText = order.status === 'PAID' ? 'Lunas' : (order.status === 'EXPIRED' ? 'Expired' : 'Belum Bayar');
+            var date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+            var price = 'Rp ' + (order.totalPrice || 0).toLocaleString('id-ID');
+
+            html += '<div class="order-item">' +
+              '<div class="order-info">' +
+                '<p class="order-product">' + (order.productName || '-') + ' x' + (order.quantity || 1) + '</p>' +
+                '<p class="order-meta">' + date + ' &bull; ' + (order.id || '') + '</p>' +
+              '</div>' +
+              '<span class="order-price">' + price + '</span>' +
+              '<span class="order-status ' + statusClass + '">' + statusText + '</span>' +
+            '</div>';
+          });
+          list.innerHTML = html;
+        })
+        .catch(function() {});
+    }
+
+    // Login handler
+    window.handleLogin = function(e) {
+      e.preventDefault();
+      var email = document.getElementById('loginEmail').value.trim();
+      var password = document.getElementById('loginPassword').value;
+      var errorEl = document.getElementById('loginError');
+      var btn = document.getElementById('loginBtn');
+
+      errorEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      fetch('/api/customer/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Login';
+        if (data.success) {
+          showProfile(data.customer);
+        } else {
+          errorEl.textContent = data.error || 'Login gagal';
+          errorEl.classList.add('show');
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Login';
+        errorEl.textContent = 'Koneksi error. Coba lagi.';
+        errorEl.classList.add('show');
+      });
+    };
+
+    // Register handler
+    window.handleRegister = function(e) {
+      e.preventDefault();
+      var name = document.getElementById('regName').value.trim();
+      var email = document.getElementById('regEmail').value.trim();
+      var phone = document.getElementById('regPhone').value.trim();
+      var password = document.getElementById('regPassword').value;
+      var errorEl = document.getElementById('registerError');
+      var successEl = document.getElementById('registerSuccess');
+      var btn = document.getElementById('registerBtn');
+
+      errorEl.classList.remove('show');
+      successEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      fetch('/api/customer/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, email: email, phone: phone, password: password })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Daftar';
+        if (data.success) {
+          successEl.textContent = 'Registrasi berhasil! Silakan login.';
+          successEl.classList.add('show');
+          // Auto switch to login tab after 1.5s
+          setTimeout(function() { switchTab('login'); }, 1500);
+        } else {
+          errorEl.textContent = data.error || 'Registrasi gagal';
+          errorEl.classList.add('show');
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Daftar';
+        errorEl.textContent = 'Koneksi error. Coba lagi.';
+        errorEl.classList.add('show');
+      });
+    };
+
+    // Logout handler
+    window.handleLogout = function() {
+      fetch('/api/customer/logout', { method: 'POST' })
+        .then(function() { showAuth(); })
+        .catch(function() { showAuth(); });
+    };
+
+  })();
+  </script>
+</body>
+</html>

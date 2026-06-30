@@ -171,7 +171,19 @@
     card.className = 'product-card';
     card.setAttribute('data-category', (product.category || 'digital').toLowerCase());
 
-    var price = 'Rp ' + (product.price || 0).toLocaleString('id-ID');
+    var price = product.price || 0;
+    var displayPrice = price;
+
+    // Show reseller price if customer is a reseller
+    if (window.__kcCustomer && window.__kcCustomer.isReseller && window.__kcCustomer.resellerDiscount) {
+      displayPrice = Math.floor(price * (1 - window.__kcCustomer.resellerDiscount / 100));
+    }
+
+    var priceStr = 'Rp ' + displayPrice.toLocaleString('id-ID');
+    var originalPriceHtml = '';
+    if (displayPrice < price) {
+      originalPriceHtml = '<span style="text-decoration:line-through;color:var(--text-muted);font-size:0.8rem;margin-left:6px;">Rp ' + price.toLocaleString('id-ID') + '</span>';
+    }
 
     card.innerHTML =
       '<div class="product-card-inner">' +
@@ -181,8 +193,8 @@
       '</svg>' +
       '</div>' +
       '<h4 class="product-name">' + product.name + '</h4>' +
-      '<p class="product-price">' + price + '</p>' +
-      '<button class="btn btn-primary btn-sm product-order-btn" onclick="addToCart(\'' + product.id + '\', \'' + encodeURIComponent(product.name) + '\', ' + product.price + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Add to Cart</button>' +
+      '<p class="product-price">' + priceStr + originalPriceHtml + '</p>' +
+      '<button class="btn btn-primary btn-sm product-order-btn" onclick="addToCart(\'' + product.id + '\', \'' + encodeURIComponent(product.name) + '\', ' + displayPrice + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Add to Cart</button>' +
       '</div>';
 
     return card;
@@ -689,6 +701,30 @@
     closeCartModal();
     openCheckoutModal(productSummary, totalPrice, firstProductId);
   };
+
+  // ===== CUSTOMER SESSION: Check login status and update navbar =====
+  (function checkCustomerSession() {
+    fetch('/api/customer/profile')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var navLink = document.getElementById('navAccountLink');
+        var navCta = document.getElementById('navCtaBtn');
+        if (data.success && data.customer) {
+          // User is logged in
+          if (navLink) navLink.textContent = data.customer.name.split(' ')[0];
+          if (navCta) navCta.textContent = data.customer.name.split(' ')[0];
+          // Store customer info for checkout
+          window.__kcCustomer = data.customer;
+        } else {
+          if (navLink) navLink.textContent = 'Login';
+          if (navCta) navCta.textContent = 'My Account';
+          window.__kcCustomer = null;
+        }
+      })
+      .catch(function () {
+        window.__kcCustomer = null;
+      });
+  })();
 
   // Initialize cart badge on load
   updateCartBadge();

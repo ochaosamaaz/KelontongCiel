@@ -182,7 +182,7 @@
       '</div>' +
       '<h4 class="product-name">' + product.name + '</h4>' +
       '<p class="product-price">' + price + '</p>' +
-      '<button class="btn btn-primary btn-sm product-order-btn" onclick="orderProduct(\'' + encodeURIComponent(product.name) + '\', ' + product.price + ', \'' + product.id + '\')">Order</button>' +
+      '<button class="btn btn-primary btn-sm product-order-btn" onclick="addToCart(\'' + product.id + '\', \'' + encodeURIComponent(product.name) + '\', ' + product.price + ')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Add to Cart</button>' +
       '</div>';
 
     return card;
@@ -313,6 +313,10 @@
     document.getElementById('checkoutTotal').textContent = 'Rp ' + (unitPrice * val).toLocaleString('id-ID');
   };
 
+  // ===== STORE CONFIG (WA number, etc) =====
+  var storeConfig = { waNumber: '6283852212648', telegramBot: 'kelontongciel_bot' };
+  fetch('/api/store/config').then(function(r) { return r.json(); }).then(function(d) { storeConfig = d; }).catch(function(){});
+
   window.payWithWA = function (encodedName, price) {
     var name = decodeURIComponent(encodedName);
     var qty = parseInt(document.getElementById('checkoutQty').value) || 1;
@@ -322,12 +326,12 @@
       '🔢 Qty: ' + qty + '\n' +
       '💰 Total: Rp ' + total.toLocaleString('id-ID') + '\n\n' +
       'Mohon diproses ya!';
-    window.open('https://wa.me/6283852212648?text=' + encodeURIComponent(msg), '_blank');
+    window.open('https://wa.me/' + storeConfig.waNumber + '?text=' + encodeURIComponent(msg), '_blank');
     closeCheckout();
   };
 
   window.payWithTG = function (encodedName, price) {
-    window.open('https://t.me/kelontongciel_bot', '_blank');
+    window.open('https://t.me/' + storeConfig.telegramBot, '_blank');
     closeCheckout();
   };
 
@@ -453,10 +457,53 @@
         });
         deliveryHtml += '</div>';
       } else if (data.deliveryData.type === 'koalastore') {
-        deliveryHtml = '<div class="success-accounts"><div class="account-item"><p>✅ Order berhasil diproses! Cek WhatsApp kamu untuk detail akun.</p></div></div>';
+        // KoalaStore checkout response — extract account info
+        deliveryHtml = '<div class="success-accounts">';
+        var items = data.deliveryData.accounts || data.deliveryData.raw || [];
+        if (!Array.isArray(items)) items = [items];
+        
+        // Try to find credentials in the response
+        var foundCredentials = false;
+        items.forEach(function (item) {
+          if (typeof item === 'object' && item !== null) {
+            // KoalaStore returns various formats - handle all
+            if (item.credential || item.account || item.data || item.serial_number) {
+              foundCredentials = true;
+              var cred = item.credential || item.account || item.serial_number || item.data || '';
+              deliveryHtml += '<div class="account-item"><p style="word-break:break-all;">' + cred + '</p></div>';
+            } else if (item.items && Array.isArray(item.items)) {
+              item.items.forEach(function (sub) {
+                foundCredentials = true;
+                var info = sub.credential || sub.account || sub.serial_number || JSON.stringify(sub);
+                deliveryHtml += '<div class="account-item"><p style="word-break:break-all;">' + info + '</p></div>';
+              });
+            } else if (item.info) {
+              deliveryHtml += '<div class="account-item"><p>' + item.info + '</p></div>';
+            } else {
+              // Show raw JSON as last resort
+              var jsonStr = JSON.stringify(item, null, 2);
+              if (jsonStr !== '{}' && jsonStr !== 'null') {
+                foundCredentials = true;
+                deliveryHtml += '<div class="account-item"><pre style="white-space:pre-wrap; word-break:break-all; font-size:12px; margin:0;">' + jsonStr + '</pre></div>';
+              }
+            }
+          } else if (typeof item === 'string' && item.length > 0) {
+            foundCredentials = true;
+            deliveryHtml += '<div class="account-item"><p style="word-break:break-all;">' + item + '</p></div>';
+          }
+        });
+
+        if (!foundCredentials) {
+          deliveryHtml += '<div class="account-item"><p>✅ Order berhasil diproses! Detail akun akan dikirim ke WhatsApp kamu.</p></div>';
+        }
+        deliveryHtml += '</div>';
       } else if (data.deliveryData.type === 'manual') {
-        deliveryHtml = '<div class="success-accounts"><div class="account-item"><p>⏳ Produk akan dikirim oleh admin ke WhatsApp kamu.</p></div></div>';
+        deliveryHtml = '<div class="success-accounts"><div class="account-item"><p>⏳ Produk akan dikirim oleh admin ke WhatsApp kamu dalam 1x24 jam.</p></div></div>';
+      } else if (data.deliveryData.type === 'error') {
+        deliveryHtml = '<div class="success-accounts"><div class="account-item"><p>⚠️ ' + (data.deliveryData.message || 'Terjadi masalah') + '</p><p>Admin akan segera menghubungi kamu.</p></div></div>';
       }
+    } else {
+      deliveryHtml = '<div class="success-accounts"><div class="account-item"><p>✅ Pembayaran berhasil! Produk sedang diproses...</p></div></div>';
     }
 
     modal.querySelector('.checkout-header h2').textContent = '✅ Pembayaran Berhasil!';
@@ -465,9 +512,10 @@
       '<div class="success-page">' +
         '<div class="success-icon">🎉</div>' +
         '<p class="success-msg">Terima kasih! Pembayaran berhasil dikonfirmasi.</p>' +
+        '<h3 style="font-size:1rem; margin-bottom:12px; color:var(--accent-blue);">📦 Detail Produk / Akun:</h3>' +
         deliveryHtml +
         '<div class="success-wa-note">' +
-          '<p>📱 Invoice & detail akun juga sudah dikirim ke WhatsApp kamu.</p>' +
+          '<p>📱 Invoice & detail akun juga dikirim ke WhatsApp kamu (jika bot online).</p>' +
         '</div>' +
         '<button class="checkout-btn checkout-btn-qris" onclick="closeCheckout()" style="max-width: 200px; margin: 20px auto 0;">Selesai</button>' +
       '</div>';
@@ -492,4 +540,156 @@
       }
     });
   });
+
+  // ===== CART SYSTEM =====
+  var CART_KEY = 'kc_cart';
+
+  function getCart() {
+    try {
+      return JSON.parse(localStorage.getItem(CART_KEY)) || [];
+    } catch (e) { return []; }
+  }
+
+  function saveCart(cart) {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    updateCartBadge();
+  }
+
+  window.addToCart = function (productId, encodedName, price) {
+    var name = decodeURIComponent(encodedName);
+    var cart = getCart();
+    var existing = null;
+    for (var i = 0; i < cart.length; i++) {
+      if (cart[i].productId === productId) { existing = cart[i]; break; }
+    }
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({ productId: productId, name: name, price: price, qty: 1 });
+    }
+    saveCart(cart);
+    showCartToast(name);
+  };
+
+  window.removeFromCart = function (index) {
+    var cart = getCart();
+    cart.splice(index, 1);
+    saveCart(cart);
+    renderCart();
+  };
+
+  window.updateCartItemQty = function (index, delta) {
+    var cart = getCart();
+    if (!cart[index]) return;
+    cart[index].qty = Math.max(1, cart[index].qty + delta);
+    saveCart(cart);
+    renderCart();
+  };
+
+  function updateCartBadge() {
+    var cart = getCart();
+    var total = 0;
+    cart.forEach(function (item) { total += item.qty; });
+    var badge = document.getElementById('cartBadge');
+    if (badge) {
+      badge.textContent = total;
+      badge.style.display = total > 0 ? 'flex' : 'none';
+    }
+  }
+
+  function showCartToast(name) {
+    var toast = document.createElement('div');
+    toast.className = 'cart-toast';
+    toast.textContent = '✓ ' + name + ' added to cart';
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add('show'); }, 10);
+    setTimeout(function () {
+      toast.classList.remove('show');
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 2000);
+  }
+
+  window.openCartModal = function () {
+    var modal = document.getElementById('cartModal');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      renderCart();
+    }
+  };
+
+  window.closeCartModal = function () {
+    var modal = document.getElementById('cartModal');
+    if (modal) {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  };
+
+  function renderCart() {
+    var cart = getCart();
+    var listEl = document.getElementById('cartItems');
+    var totalEl = document.getElementById('cartTotal');
+    var emptyEl = document.getElementById('cartEmpty');
+    var checkoutBtn = document.getElementById('cartCheckoutBtn');
+
+    if (!listEl) return;
+
+    if (cart.length === 0) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      if (totalEl) totalEl.textContent = 'Rp 0';
+      if (checkoutBtn) checkoutBtn.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (checkoutBtn) checkoutBtn.style.display = '';
+
+    var html = '';
+    var grandTotal = 0;
+    cart.forEach(function (item, i) {
+      var subtotal = item.price * item.qty;
+      grandTotal += subtotal;
+      html += '<div class="cart-item">' +
+        '<div class="cart-item-info">' +
+          '<span class="cart-item-name">' + item.name + '</span>' +
+          '<span class="cart-item-price">Rp ' + item.price.toLocaleString('id-ID') + '</span>' +
+        '</div>' +
+        '<div class="cart-item-actions">' +
+          '<div class="cart-item-qty">' +
+            '<button onclick="updateCartItemQty(' + i + ', -1)">-</button>' +
+            '<span>' + item.qty + '</span>' +
+            '<button onclick="updateCartItemQty(' + i + ', 1)">+</button>' +
+          '</div>' +
+          '<span class="cart-item-subtotal">Rp ' + subtotal.toLocaleString('id-ID') + '</span>' +
+          '<button class="cart-item-remove" onclick="removeFromCart(' + i + ')" title="Hapus">&times;</button>' +
+        '</div>' +
+      '</div>';
+    });
+
+    listEl.innerHTML = html;
+    if (totalEl) totalEl.textContent = 'Rp ' + grandTotal.toLocaleString('id-ID');
+  }
+
+  window.cartCheckout = function () {
+    var cart = getCart();
+    if (cart.length === 0) return;
+
+    // Build a summary and open checkout modal for all items
+    var totalPrice = 0;
+    var names = [];
+    cart.forEach(function (item) {
+      totalPrice += item.price * item.qty;
+      names.push(item.name + ' x' + item.qty);
+    });
+    var productSummary = names.join(', ');
+    var firstProductId = cart[0].productId;
+
+    closeCartModal();
+    openCheckoutModal(productSummary, totalPrice, firstProductId);
+  };
+
+  // Initialize cart badge on load
+  updateCartBadge();
 })();
